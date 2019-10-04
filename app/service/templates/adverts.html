@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Adverts</title>
+  </head>
+  <body>
+    {% for ad in adverts %}
+      <h4>{{ad.page_id}}</h4>
+      <p>{{ad.page_name}}</p>
+    {% end %}
+    {% for i in impressions %}
+      <h4>{{i.page_id}}</h4>
+      <p>{{i.spent}}</p>
+    {% end %}
+  </body>
+</html>

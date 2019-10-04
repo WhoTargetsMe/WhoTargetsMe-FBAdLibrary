@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>Advertisers</title>
+  </head>
+  <body>
+    {% for advr in advertisers %}
+      <h4>{{advr.page_name}}</h4>
+      <div>{{advr.page_id}} | DB No:{{advr.id}}</div>
+      <img src="static/img/pic1.png" alt="" class="some_class">
+      <div>
+        <a href="{{url_for('main.show_adverts', page_id=advr.page_id)}}">Link to impressions {{advr.page_id}}</a>
+      </div>
+    {% endfor %}
+  </body>
+</html>
