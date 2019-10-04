@@ -29,23 +29,18 @@ flask_app = create_app('prod')
 ```
 if intend to run with prod config. Default config is 'dev'
 
-$ python manage.py db init
-$ python manage.py db migrate
-$ python manage.py db upgrade
-
-For help:
-$ python manage.py db --help
-
 7. Run the project
 python run.py ENV=dev
 
 - locally will run on localhost:5000
 
 8. Sample calls
-- Add/update advertisers
-POST, PUT {{url}}/add (page_id cannot be updated - POST will raise, PUT will update other details)
 
-Example: {{url}}/add
+- Add/update advertisers
+
+POST, PUT {{url}}/add/advertisers (page_id cannot be updated - POST will raise, PUT will update other details)
+
+Example: {{url}}/add/advertisers
 Example body:
 ```
 {"advertisers":
@@ -56,6 +51,19 @@ Example body:
 ```
 
 - Load all ads by given advertiser or for country
+
 GET {{url}}/loadall/<country>/<advertiser_id>
+
 Example (load by page_id): {{url}}/loadall/GB/8807334278
+
 Example (load all for country): {{url}}/loadall/GB/all
+
+
+9. After any schema change in the app need to migrate
+
+- python manage.py db init
+- python manage.py db migrate
+- python manage.py db upgrade
+
+For help:
+- python manage.py db --help

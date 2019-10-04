@@ -81,20 +81,22 @@ def parse_and_load_adverts(details, country):
                 impression_id = created_impr.id
                 demograph_lst = []
                 region_lst = []
-                for it in demographic_distribution:
-                    percentage, age, gender = parse_distr(it, 'dem')
-                    dem = Demographic_distribution(
-                        impression_id, percentage, age, gender
-                    )
-                    demograph_lst.append(dem)
-                for it in region_distribution:
-                    percentage, region = parse_distr(it, 'reg')
-                    reg = Region_distribution(
-                        impression_id, percentage, region
-                    )
-                    region_lst.append(reg)
-                db.session.add_all(demograph_lst)
-                db.session.add_all(region_lst)
+                if demographic_distribution:
+                    for it in demographic_distribution:
+                        percentage, age, gender = parse_distr(it, 'dem')
+                        dem = Demographic_distribution(
+                            impression_id, percentage, age, gender
+                        )
+                        demograph_lst.append(dem)
+                    db.session.add_all(demograph_lst)
+                if region_distribution:
+                    for it in region_distribution:
+                        percentage, region = parse_distr(it, 'reg')
+                        reg = Region_distribution(
+                            impression_id, percentage, region
+                        )
+                        region_lst.append(reg)
+                    db.session.add_all(region_lst)
                 db.session.commit()
 
     except exc.IntegrityError as ex:

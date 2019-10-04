@@ -56,15 +56,18 @@ def download_ads(API_VERSION, LONG_TOKEN,\
         data = r.get('data', [])
         result.extend(data)
         next_page = r.get('paging', {}).get('next')
-        print('-------RESULTS----------', 'iterations=', i, 'len data=',len(data), r['data'][0])
+        print('-------RESULTS----------', 'iterations=', i, 'len data=',len(data))
 
     while i < PAGES_BETWEEN_STORING:
         argsi = build_args(ADS_PER_PAGE, url=next_page)
-        print('=======ARGS', argsi['search_page_ids'], argsi['after'])
+        try:
+            print('=======ARGS', argsi['search_page_ids'], argsi['after'])
+        except:
+            return result, None
         r = graph.request(method, argsi)
         data = r.get('data', [])
         result.extend(data)
         next_page = r.get('paging', {}).get('next', None)
         i += 1
-        print('-------RESULTS----------', 'iterations=', i, 'len data=',len(data), r['data'][0])
+        print('-------RESULTS----------', 'iterations=', i, 'len data=',len(data))
     return result, next_page
