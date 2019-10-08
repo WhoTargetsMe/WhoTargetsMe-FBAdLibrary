@@ -1,6 +1,8 @@
 _run.py
-__pycache__
+*/__pycache__/
 .DS_Store
 config/dev.py
 migrations
 fbconnector/drafts
+.idea/*
+*.pyc

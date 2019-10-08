@@ -1,5 +1,6 @@
 import iso8601
 import re
+from datetime import datetime
 
 
 def cast_date(ts):
@@ -24,3 +25,6 @@ def parse_distr(obj, key):
     if obj is not None and sum([1 for k in keys if k in obj.keys()]) == len(keys):
         return [obj[k] for k in keys]
     return [None for k in keys]
+
+def show_users():
+    print('running SCHEDULER_JOB',datetime.now())

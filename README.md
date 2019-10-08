@@ -10,7 +10,7 @@ cd myenv
 git clone repo to myenv
 
 4. Install libraries
-pip install requirements.txt
+pip install -r requirements.txt
 
 5. Create Postgres DB
 - Install postgres
