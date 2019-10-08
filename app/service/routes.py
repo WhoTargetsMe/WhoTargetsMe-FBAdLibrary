@@ -1,7 +1,7 @@
 from app.service import main
 from app.fbconnector.ad_downloader import download_ads
 from app import db
-from app.service.models import Adverts, Advertisers, Impressions
+from app.service.models import Adverts, Advertisers, Impressions, Tokens
 from app.utils.loader import parse_and_load_adverts
 
 from flask import render_template, request, session, g, jsonify
@@ -40,7 +40,7 @@ def add_advertisers():
     elif request.method == 'PUT':
         for obj in details:
             try:
-                exists = Advertisers.query.filter_by(page_id=obj.get('page_id', None)).first()
+                exists = Advertisers.query.filter_by(page_id=obj.get('page_id', None))
                 if exists:
                     updated = exists.update({'page_name': obj.get('page_name', None), 'country': obj.get('country', None)})
                 else:
@@ -61,24 +61,28 @@ def load_data_from_archive(country, advertiser_id):
         IDS = [advertiser_id]
     else:
         advertisers = Advertisers.query.all()
-        print(advertisers, type(advertisers))
         IDS = [int(a.page_id) for a in advertisers if a.country == country]
+        print(advertisers, IDS)
 
     # Get config to make request to FB library
     API_VERSION = ap.config['API_VERSION']
-    LONG_TOKEN = ap.config['LONG_TOKEN']
     PAGES_BETWEEN_STORING = ap.config['PAGES_BETWEEN_STORING']
     ADS_PER_PAGE = ap.config['ADS_PER_PAGE']
+    latest_record = db.session.query(Tokens).order_by(Tokens.id.desc()).first()
+    LONG_TOKEN = latest_record.long_token
 
-    # Iteratively download and store ads
-    next_page = 'start'
-    page = 0
-    while next_page:
-        body, next_page = download_ads(API_VERSION, LONG_TOKEN,\
-            PAGES_BETWEEN_STORING, ADS_PER_PAGE, IDS, country, next_page)
-        print('........loading data to DB........', 'page=', page, 'time=', datetime.now())
-        parse_and_load_adverts(body, country)
-        page += 1
+    for ID in IDS:
+        # Iteratively download and store ads
+        next_page = 'start'
+        page = 0
+        while next_page:
+            print('...HTTP...Starting download from FB library.................', ID, 'time=', datetime.now())
+            body, next_page = download_ads(API_VERSION, LONG_TOKEN,\
+                PAGES_BETWEEN_STORING, ADS_PER_PAGE, [ID], country, next_page)
+            print('...HTTP.....Uploading data to DB....................', ID, 'page=', page, 'time=', datetime.now())
+            parse_and_load_adverts(body, country)
+            page += 1
+        print('...HTTP...Finished upload to db.............................', ID, 'time=', datetime.now())
     return '<h1> Advertisers: {0} </h1>'.format(IDS)
 
 # Mock main loop for testing purposes
@@ -90,3 +94,29 @@ def add_advert(country):
     if not details or len(details) == 0 or not country:
         return 'Pls provide at least one post and country'
     parse_and_load_adverts(body, country)
+    return 'OK'
+
+@main.route('/refreshtoken', methods=['GET'])
+def refresh_token():
+    latest_record = db.session.query(Tokens).order_by(Tokens.id.desc()).first()
+    SHORT_TOKEN = latest_record.short_token
+    APP_ID = ap.config['APP_ID']
+    APP_SECRET = ap.config['APP_SECRET']
+
+    url = "https://graph.facebook.com/v4.0/oauth/access_token?grant_type=fb_exchange_token&client_id=" +\
+        APP_ID + "&client_secret=" + APP_SECRET +\
+        "&fb_exchange_token=" + SHORT_TOKEN
+    r = requests.get(url)
+    details = r.json()
+    LONG_TOKEN = details['access_token']
+    seconds = details['expires_in']
+    expires_on = datetime.now() + timedelta(seconds=seconds)
+    item = Tokens(
+        SHORT_TOKEN,
+        LONG_TOKEN,
+        latest_record.short_last_updated_at,
+        datetime.now(),
+        expires_on
+        )
+    db.session.add(item)
+    db.session.commit()

@@ -17,12 +17,6 @@ Please note this isn't a per-user limit. Any individual user can make more than 
 # https://medium.com/@DrGabrielA81/python-how-making-facebook-api-calls-using-facebook-sdk-ea18bec973c8
 # https://medium.com/@DrGabrielA81/python-how-getting-facebook-data-and-insights-using-facebook-sdk-9de14d3c12fb
 
-# How many pages we want to fetch between each storing operation
-# PAGES_BETWEEN_STORING
-# Each page may contain 25-5000 ads, but tests show that they don't permit
-# to fetch 5000
-# ADS_PER_PAGE
-
 def build_args(adspp, url=None):
     args = {}
     if url:

@@ -43,14 +43,18 @@ def parse_and_load_adverts(details, country):
                     lower_bound_spend,
                     upper_bound_spend)
 
+                ad_delivery_stop_time = cast_date(obj.get('ad_delivery_stop_time', None))
+
                 if exists:
                     impression.advert_id = exists.id
+                    if exists.ad_delivery_stop_time is None and ad_delivery_stop_time:
+                        print('Updating ad_delivery_stop_time to', ad_delivery_stop_time)
+                        exists.ad_delivery_stop_time = ad_delivery_stop_time
                     db.session.add(impression)
                     db.session.commit()
                 else: # create advert first; then get its id and load impressions
                     ad_creation_time = cast_date(obj.get('ad_creation_time', None))
                     ad_delivery_start_time = cast_date(obj.get('ad_delivery_start_time', None))
-                    ad_delivery_stop_time = cast_date(obj.get('ad_delivery_stop_time', None))
                     image_link = None
 
                     item = Adverts(

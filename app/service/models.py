@@ -195,12 +195,14 @@ class Tokens(db.Model):
     long_token = db.Column(db.Text, unique=True, nullable=True)
     short_last_updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
     long_last_updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+    long_token_expires_on = db.Column(db.DateTime(timezone=True), default=datetime.now)
 
-    def __init__(self, short_token, long_token, short_last_updated_at, long_last_updated_at):
+    def __init__(self, short_token, long_token, short_last_updated_at, long_last_updated_at, long_token_expires_on):
         self.short_token = short_token
         self.long_token = long_token
         self.short_last_updated_at = short_last_updated_at
         self.long_last_updated_at = long_last_updated_at
+        self.long_token_expires_on = long_token_expires_on
 
     def __repr__(self):
         return 'long_last_updated_at is {}'.format(self.long_last_updated_at)
