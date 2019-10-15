@@ -13,7 +13,7 @@ import requests
 from datetime import datetime
 
 def call_loader(country='GB'):
-    with flask_app.app_context():
+    with application.app_context():
         print('starting loading job', datetime.now())
 
         advertisers = Advertisers.query.all()
@@ -52,15 +52,15 @@ for i, arg in enumerate(sys.argv):
     for param in PARAMS.keys():
         if arg.upper().find(param) > -1: PARAMS[param] = sys.argv[i][sys.argv[i].upper().find(param) + len(param) + 1:]
 print('PARAMS', PARAMS)
-flask_app = create_app(PARAMS['ENV'])
-INTERVAL = flask_app.config['INTERVAL']
+application = create_app(PARAMS['ENV'])
+INTERVAL = application.config['INTERVAL']
 
 scheduler = BackgroundScheduler()
 scheduler.add_job(func=call_loader, trigger='interval', seconds=INTERVAL, misfire_grace_time=10)
 scheduler.start()
 
 
-with flask_app.app_context():
+with application.app_context():
     db.create_all()
 
-    flask_app.run(use_reloader=False)
+    application.run(use_reloader=False)
