@@ -48,10 +48,10 @@ PARAMS = {
     'ENV': 'prod' # 'dev', 'prod'
 }
 
-for i, arg in enumerate(sys.argv):
-    for param in PARAMS.keys():
-        if arg.upper().find(param) > -1: PARAMS[param] = sys.argv[i][sys.argv[i].upper().find(param) + len(param) + 1:]
-print('PARAMS', PARAMS)
+# for i, arg in enumerate(sys.argv):
+#     for param in PARAMS.keys():
+#         if arg.upper().find(param) > -1: PARAMS[param] = sys.argv[i][sys.argv[i].upper().find(param) + len(param) + 1:]
+# print('PARAMS', PARAMS)
 application = create_app(PARAMS['ENV'])
 INTERVAL = application.config['INTERVAL']
 
