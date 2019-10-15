@@ -41,11 +41,11 @@ def call_loader(country='GB'):
             print('...CRON...Finished upload to db.............................', ID, 'time=', datetime.now())
         return '<h1> Advertisers: {0} </h1>'.format(IDS)
 
-if len(sys.argv) < 2:
-    raise ValueError("Pls provide ENV")
+# if len(sys.argv) < 2:
+#     raise ValueError("Pls provide ENV")
 
 PARAMS = {
-    'ENV': 'dev' # 'dev', 'prod'
+    'ENV': 'prod' # 'dev', 'prod'
 }
 
 for i, arg in enumerate(sys.argv):
