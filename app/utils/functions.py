@@ -1,11 +1,11 @@
-import iso8601
+# import iso8601
 import re
 from datetime import datetime
 
 
 def cast_date(ts):
     if ts is not None:
-        return iso8601.parse_date(ts)
+        return ts #iso8601.parse_date(ts)
     return ts
 
 def extract_id(x):
