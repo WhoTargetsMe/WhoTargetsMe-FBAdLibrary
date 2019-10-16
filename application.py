@@ -59,8 +59,8 @@ scheduler = BackgroundScheduler()
 scheduler.add_job(func=call_loader, trigger='interval', seconds=INTERVAL, misfire_grace_time=10)
 scheduler.start()
 
+if __name__ == '__main__':
+    with application.app_context():
+        db.create_all()
 
-with application.app_context():
-    db.create_all()
-
-    application.run(use_reloader=False)
+        application.run(use_reloader=False)
