@@ -8,14 +8,14 @@ from datetime import datetime
 db = SQLAlchemy()
 
 def create_app(config_type):
-    app = Flask(__name__)
+    application = Flask(__name__)
     configuration = os.path.join(os.getcwd(), 'config', config_type + '.py')
-    app.config.from_pyfile(configuration)
+    application.config.from_pyfile(configuration)
 
-    db.init_app(app)
-    migrate = Migrate(app, db)
+    db.init_app(application)
+    migrate = Migrate(application, db)
 
     from app.service import main
-    app.register_blueprint(main)
+    application.register_blueprint(main)
 
-    return app
+    return application
