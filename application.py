@@ -3,7 +3,7 @@ from app.service.models import Advertisers, Tokens
 
 import sys
 from apscheduler.schedulers.background import BackgroundScheduler
-from app.fbconnector.ad_downloader import download_ads
+# from app.fbconnector.ad_downloader import download_ads
 from app.service.models import Advertisers, Tokens
 from app.utils.loader import parse_and_load_adverts
 from flask import render_template, request, session, g, jsonify
@@ -33,8 +33,8 @@ def call_loader(country='GB'):
             page = 0
             while page < 2: #next_page:
                 print('...CRON...Starting download from FB library.................', ID, 'time=', datetime.now())
-                body, next_page = download_ads(API_VERSION, LONG_TOKEN,\
-                    PAGES_BETWEEN_STORING, ADS_PER_PAGE, [ID], country, next_page)
+                # body, next_page = download_ads(API_VERSION, LONG_TOKEN,\
+                #     PAGES_BETWEEN_STORING, ADS_PER_PAGE, [ID], country, next_page)
                 print('...CRON.....Uploading data to DB....................', ID, 'page=', page, 'time=', datetime.now())
                 parse_and_load_adverts(body, country)
                 page += 1
