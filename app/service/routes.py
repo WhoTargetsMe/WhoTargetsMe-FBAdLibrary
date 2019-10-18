@@ -1,5 +1,5 @@
 from app.service import main
-# from app.fbconnector.ad_downloader import download_ads
+from app.fbconnector.ad_downloader import download_ads
 from app import db
 from app.service.models import Adverts, Advertisers, Impressions, Tokens
 from app.utils.loader import parse_and_load_adverts
@@ -77,8 +77,8 @@ def load_data_from_archive(country, advertiser_id):
         page = 0
         while next_page:
             print('...HTTP...Starting download from FB library.................', ID, 'time=', datetime.now())
-            # body, next_page = download_ads(API_VERSION, LONG_TOKEN,\
-            #     PAGES_BETWEEN_STORING, ADS_PER_PAGE, [ID], country, next_page)
+            body, next_page = download_ads(API_VERSION, LONG_TOKEN,\
+                PAGES_BETWEEN_STORING, ADS_PER_PAGE, [ID], country, next_page)
             print('...HTTP.....Uploading data to DB....................', ID, 'page=', page, 'time=', datetime.now())
             parse_and_load_adverts(body, country)
             page += 1

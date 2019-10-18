@@ -1,5 +1,4 @@
-# import facebook
-import pandas as pd
+from app.fbconnector.facebook import GraphAPI
 from urllib.parse import urlsplit, parse_qs
 import os
 
@@ -31,7 +30,7 @@ def build_args(adspp, url=None):
 def download_ads(API_VERSION, LONG_TOKEN,\
     PAGES_BETWEEN_STORING, ADS_PER_PAGE, IDS, country, next_page):
 
-    graph = facebook.GraphAPI(version=API_VERSION)
+    graph = GraphAPI(version=API_VERSION)
 
     args = dict()
     args["access_token"] = LONG_TOKEN
