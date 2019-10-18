@@ -48,10 +48,10 @@ def parse_and_load_adverts(details, country):
                 if exists:
                     impression.advert_id = exists.id
                     if exists.ad_delivery_stop_time is None and ad_delivery_stop_time:
-                        print('Updating ad_delivery_stop_time to', ad_delivery_stop_time, "id=", exists.id)
+                        # print('Updating ad_delivery_stop_time to', ad_delivery_stop_time, "id=", exists.id)
                         exists.ad_delivery_stop_time = ad_delivery_stop_time
                     elif exists.ad_delivery_stop_time is not None:
-                        print('Ad is closed: ad_delivery_stop_time=', ad_delivery_stop_time, "id=", exists.id)
+                        # print('Ad is closed: ad_delivery_stop_time=', ad_delivery_stop_time, "id=", exists.id)
                         continue
                     db.session.add(impression)
                     db.session.commit()
