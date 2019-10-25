@@ -2,6 +2,7 @@ from app import db
 from datetime import datetime
 from sqlalchemy.types import TypeDecorator, VARCHAR
 from sqlalchemy.ext.mutable import Mutable
+from sqlalchemy.orm import relationship, backref
 import json
 
 class JSONEncodedDict(TypeDecorator):
@@ -83,13 +84,15 @@ class Adverts(db.Model):
     image_link = db.Column(db.Text, nullable=True) # AWS3
     currency = db.Column(db.String(10), nullable=True)
     funding_entity = db.Column(db.Text, nullable=True, index=True)
+    ad_info = db.Column(JSONEncodedDict, nullable=True) #additional page info from python media scrape
     created_at = db.Column(db.DateTime(timezone=True), default=datetime.now)
     updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+    md = relationship("Media", cascade="all, delete-orphan", backref='adverts')
 
     def __init__(self, page_id, page_name, post_id, country, ad_creation_time, ad_creative_body,\
         ad_creative_link_caption, ad_creative_link_description, ad_creative_link_title,\
         ad_delivery_start_time, ad_delivery_stop_time, ad_snapshot_url, image_link, currency,\
-        funding_entity):
+        funding_entity, ad_info):
         self.page_id = page_id
         self.page_name = page_name
         self.post_id = post_id
@@ -105,6 +108,7 @@ class Adverts(db.Model):
         self.image_link = image_link
         self.currency = currency
         self.funding_entity = funding_entity
+        self.ad_info = ad_info
 
     def __repr__(self):
         return 'The page_id is {}, page_name is {} '.format(self.page_id, self.page_name)
@@ -112,8 +116,6 @@ class Adverts(db.Model):
 class Impressions(db.Model):
     __tablename__ = 'impressions'
 
-    # # QUESTION: should FK be id or page_id of Adverts table?
-    # impressions - is it a list
     id = db.Column(db.Integer, primary_key=True)
     advert_id = db.Column(db.Integer, db.ForeignKey('adverts.id'), nullable=False, index=True)
     page_id = db.Column(db.String(25), nullable=False, index=True) # WTM advertiserId
@@ -129,6 +131,8 @@ class Impressions(db.Model):
     upper_bound_spend = db.Column(db.String(25), nullable=True) #parsed
     created_at = db.Column(db.DateTime(timezone=True), default=datetime.now)
     updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+    dd = relationship("Demographic_distribution", cascade="all, delete-orphan", backref='impressions')
+    rd = relationship("Region_distribution", cascade="all, delete-orphan", backref='impressions')
 
     def __init__(self, advert_id, page_id, post_id, country, demographic_distribution, region_distribution,\
         impressions, lower_bound_impressions, upper_bound_impressions, spend, lower_bound_spend,\
@@ -159,6 +163,7 @@ class Demographic_distribution(db.Model):
     gender = db.Column(db.String(10), nullable=True) #"Male", "Female", "Unknown"
     created_at = db.Column(db.DateTime(timezone=True), default=datetime.now)
     updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+    # impr = relationship("Impressions", backref=backref("dd", cascade="all, delete-orphan"))
 
     def __init__(self, impression_id, percentage, age, gender):
         self.impression_id = impression_id
@@ -178,6 +183,7 @@ class Region_distribution(db.Model):
     region = db.Column(db.String(255), nullable=True, index=True)
     created_at = db.Column(db.DateTime(timezone=True), default=datetime.now)
     updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+    # impr = relationship("Impressions", backref=backref("rd", cascade="all, delete-orphan"))
 
     def __init__(self, impression_id, percentage, region):
         self.impression_id = impression_id
@@ -186,6 +192,25 @@ class Region_distribution(db.Model):
 
     def __repr__(self):
         return 'The percentage is {}, impression_id is {}'.format(self.percentage, self.impression_id)
+
+class Media(db.Model):
+    __tablename__ = 'media'
+
+    id = db.Column(db.Integer, primary_key=True)
+    advert_id = db.Column(db.Integer, db.ForeignKey('adverts.id'), nullable=False, index=True)
+    www_links = db.Column(db.JSON, nullable=True) #raw value
+    aws_links = db.Column(db.JSON, nullable=True) #raw value
+    created_at = db.Column(db.DateTime(timezone=True), default=datetime.now)
+    updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
+
+    def __init__(self, advert_id, www_links, aws_links):
+        self.advert_id = advert_id
+        self.www_links = www_links
+        self.aws_links = aws_links
+
+    def __repr__(self):
+        return 'The link is {}'.format(self.aws_links)
+
 
 class Tokens(db.Model):
     __tablename__ = 'tokens'
