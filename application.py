@@ -4,21 +4,26 @@ from app.service.models import Advertisers, Tokens
 import sys
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.fbconnector.ad_downloader import download_ads
-from app.service.models import Advertisers, Tokens
+from app.service.models import Advertisers, Adverts, Tokens
 from app.utils.loader import parse_and_load_adverts
 from flask import render_template, request, session, g, jsonify
 from flask import current_app as ap
-from sqlalchemy import exc
+from sqlalchemy import exc, func
 import requests
 from datetime import datetime
 
 def call_loader(country='GB'):
     with application.app_context():
         print('starting loading job', datetime.now())
+        single_call_lst = []
 
         advertisers = Advertisers.query.all()
         IDS = [int(a.page_id) for a in advertisers if a.country == country]
         print('FETCHING IDS ...', IDS)
+
+        adverts = db.session.query(Adverts.page_id, func.count(Adverts.page_id)).group_by(Adverts.page_id).all()
+        single_call_lst = [int(a[0]) for a in adverts if a[1] < 950]
+        print('single_call_lst', single_call_lst)
 
         # Get config to make request to FB library
         API_VERSION = ap.config['API_VERSION']
@@ -31,10 +36,11 @@ def call_loader(country='GB'):
             # Iteratively download and store ads
             next_page = 'start'
             page = 0
+            single_call = ID in single_call_lst
             while next_page:
                 print('...CRON...Starting download from FB library.................', ID, 'time=', datetime.now())
                 body, next_page = download_ads(API_VERSION, LONG_TOKEN,\
-                    PAGES_BETWEEN_STORING, ADS_PER_PAGE, [ID], country, next_page)
+                    PAGES_BETWEEN_STORING, ADS_PER_PAGE, [ID], country, next_page, single_call)
                 print('...CRON.....Uploading data to DB....................', ID, 'page=', page, 'time=', datetime.now())
                 parse_and_load_adverts(body, country)
                 page += 1

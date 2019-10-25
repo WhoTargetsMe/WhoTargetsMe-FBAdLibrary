@@ -3,8 +3,8 @@ from flask_script import Manager, Command, Option
 from flask_migrate import Migrate, MigrateCommand
 from app import create_app, db
 
-# flask_app = create_app('dev')
-flask_app = create_app('prod')
+flask_app = create_app('dev')
+# flask_app = create_app('prod')
 
 migrate = Migrate(flask_app, db)
 manager = Manager(flask_app)

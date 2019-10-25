@@ -59,6 +59,7 @@ def parse_and_load_adverts(details, country):
                     ad_creation_time = cast_date(obj.get('ad_creation_time', None))
                     ad_delivery_start_time = cast_date(obj.get('ad_delivery_start_time', None))
                     image_link = None
+                    ad_info = None
 
                     item = Adverts(
                         obj.get('page_id', None),
@@ -75,7 +76,8 @@ def parse_and_load_adverts(details, country):
                         obj.get('ad_snapshot_url', None),
                         image_link,
                         obj.get('currency', None),
-                        obj.get('funding_entity', None))
+                        obj.get('funding_entity', None),
+                        ad_info)
                     db.session.add(item)
                     db.session.commit()
                     created_advert = db.session.query(Adverts).order_by(Adverts.id.desc()).first()
