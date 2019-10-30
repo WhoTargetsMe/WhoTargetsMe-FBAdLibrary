@@ -11,6 +11,7 @@ SQLALCHEMY_TRACK_MODIFICATIONS=False
 APP_ID='1969644276620014'
 APP_SECRET='8f12eb11035256f47ed1be33974967a6'
 API_VERSION='3.1'
+ENV_LABEL='prod'
 
 # How many pages we want to fetch between each storing operation
 PAGES_BETWEEN_STORING = 5
