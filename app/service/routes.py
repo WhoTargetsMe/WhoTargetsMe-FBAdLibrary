@@ -139,7 +139,7 @@ def refresh_token():
 def download_media():
     size = 20
     advrts = Adverts.query.filter_by(image_link=None)
-    if size >= len(advrts): size = len(advrts)
+    if size >= advrts.count(): size = advrts.count()
     [print(i.post_id) for i in advrts[:size]]
     creds = {
         'long_token': get_long_token(),
