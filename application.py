@@ -16,21 +16,21 @@ def call_loader(country='GB'):
     with application.app_context():
         print('starting loading job', datetime.now())
         single_call_lst = []
-
-        advertisers = Advertisers.query.all()
-        IDS = [int(a.page_id) for a in advertisers if a.country == country]
-        print('FETCHING IDS ...', IDS)
-
-        adverts = db.session.query(Adverts.page_id, func.count(Adverts.page_id)).group_by(Adverts.page_id).all()
-        single_call_lst = [int(a[0]) for a in adverts if a[1] < 950]
-        print('single_call_lst', single_call_lst)
-
         # Get config to make request to FB library
         API_VERSION = ap.config['API_VERSION']
         PAGES_BETWEEN_STORING = ap.config['PAGES_BETWEEN_STORING']
         ADS_PER_PAGE = ap.config['ADS_PER_PAGE']
         latest_record = db.session.query(Tokens).order_by(Tokens.id.desc()).first()
         LONG_TOKEN = latest_record.long_token
+
+        advertisers = Advertisers.query.all()
+        IDS = [int(a.page_id) for a in advertisers if a.country == country]
+        print('FETCHING IDS ...', IDS)
+
+        adverts = db.session.query(Adverts.page_id, func.count(Adverts.page_id)).group_by(Adverts.page_id).all()
+        single_call_lst = [int(a[0]) for a in adverts if a[1] < (ADS_PER_PAGE - 100)]
+        print('single_call_lst', single_call_lst)
+
 
         for ID in IDS:
             # Iteratively download and store ads

@@ -8,8 +8,11 @@ from app.s3downloader.media_downloader_selenium import get_and_load_images_to_s3
 from flask import render_template, request, session, g, jsonify
 from flask import current_app as ap
 from sqlalchemy import exc, func
+from selenium import webdriver
+from selenium.webdriver.support.ui import WebDriverWait
 import requests
 from datetime import datetime
+from time import sleep
 
 def get_long_token():
     latest_record = db.session.query(Tokens).order_by(Tokens.id.desc()).first()
@@ -63,6 +66,12 @@ def add_advertisers():
 @main.route('/loadall/<country>/<advertiser_id>', methods=['GET'])
 def load_data_from_archive(country, advertiser_id):
     single_call_lst = []
+    # Get config to make request to FB library
+    API_VERSION = ap.config['API_VERSION']
+    PAGES_BETWEEN_STORING = ap.config['PAGES_BETWEEN_STORING']
+    ADS_PER_PAGE = ap.config['ADS_PER_PAGE']
+    LONG_TOKEN = get_long_token()
+
     if advertiser_id != 'all':
         IDS = [advertiser_id]
     else:
@@ -71,14 +80,9 @@ def load_data_from_archive(country, advertiser_id):
         print(advertisers, IDS)
 
         adverts = db.session.query(Adverts.page_id, func.count(Adverts.page_id)).group_by(Adverts.page_id).all()
-        single_call_lst = [int(a[0]) for a in adverts if a[1] < 950]
+        single_call_lst = [int(a[0]) for a in adverts if a[1] < (ADS_PER_PAGE - 100)]
         print('single_call_lst', single_call_lst)
 
-    # Get config to make request to FB library
-    API_VERSION = ap.config['API_VERSION']
-    PAGES_BETWEEN_STORING = ap.config['PAGES_BETWEEN_STORING']
-    ADS_PER_PAGE = ap.config['ADS_PER_PAGE']
-    LONG_TOKEN = get_long_token()
 
     for ID in IDS:
         # Iteratively download and store ads
@@ -133,18 +137,37 @@ def refresh_token():
 
 @main.route('/media', methods=['GET'])
 def download_media():
+    size = 20
     advrts = Adverts.query.filter_by(image_link=None)
-    [print(i.post_id) for i in advrts[:5]]
+    if size >= len(advrts): size = len(advrts)
+    [print(i.post_id) for i in advrts[:size]]
     creds = {
         'long_token': get_long_token(),
         'access_key': ap.config['ACCESS_KEY'],
-        'secret_key': ap.config['SECRET_KEY'],
+        'secret_key': ap.config['SECRET_KEY']
     }
+    if ap.config['ENV_LABEL'] == 'dev':
+        driver = webdriver.Chrome()
+        login_url = 'https://www.facebook.com'
+        driver.get(login_url)
+        sleep(40)
+        # email = driver.find_element_by_id("email")
+        # passwd = driver.find_element_by_id("pass")
+        # passwd = driver.find_element_by_id("pass")
+        # button.click()
 
-    for advert in advrts[:2]:
+    elif ap.config['ENV_LABEL'] == 'prod':
+        DRIVER_PATH = '/usr/bin/chromedriver'
+        options = webdriver.ChromeOptions()
+        options.add_argument("--remote-debugging-port=9222")
+        options.headless = True
+        driver = webdriver.Chrome(executable_path=DRIVER_PATH, options=options)
+
+    for advert in advrts[:size]:
         print('ITEM', advert.post_id)
-        aws_links, www_links, ad_info = get_and_load_images_to_s3(advert.post_id, advert.page_id, creds)
+        aws_links, www_links, ad_info = get_and_load_images_to_s3(advert.post_id, advert.page_id, creds, driver)
         if len(aws_links) == 0 and len(www_links) == 0:
+            print('no links for', advert.post_id, advert.page_id)
             continue
         elif len(aws_links) > 0:
             advert.image_link = 'uploaded_to_aws'
@@ -158,5 +181,7 @@ def download_media():
             db.session.commit()
         except exc.IntegrityError as ex:
             db.session.rollback()
-            return 'error during media links saving'
+            continue
+            #return 'error during media links saving'
+    driver.quit()
     return 'OK'

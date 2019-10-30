@@ -1,6 +1,7 @@
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 import requests
+#import browser_cookie3
 import io
 import os
 import boto3
@@ -63,14 +64,16 @@ def get_json(txt):
         except:
             continue
 
-def get_and_load_images_to_s3(post_id, page_id, creds):
+def get_and_load_images_to_s3(post_id, page_id, creds, driver):
     www_links = set()
     url = 'https://www.facebook.com/ads/archive/render_ad/?id=' + str(post_id) + '&access_token=' + str(creds['long_token'])
     # Get additional info about ad
     r = requests.get(url).text
     ad_info = None
     start = r.find('{"adCard":')
+
     page_profile_picture_url = None
+    profile_picture_url = 'https://graph.facebook.com/'
     if start != -1:
         ad_info = get_json(r[start:])
         t = '"page_profile_picture_url":"'
@@ -81,12 +84,16 @@ def get_and_load_images_to_s3(post_id, page_id, creds):
         if page_profile_picture_url and len(page_profile_picture_url) > 0:
             page_profile_picture_url = page_profile_picture_url.replace('\\', '')
 
+    # r = requests.get(login_url)
+    # if r.status_code == 200:
+    #     cj = browser_cookie3.chrome('www.facebook.com')
+    #     for c in cj:
+    #         print(c)
+
     # Get images links
-    driver = webdriver.Chrome()
     driver.get(url)
     sleep(5)
-
-    driver.implicitly_wait(300)
+    # driver.implicitly_wait(300)
     soup = BeautifulSoup(driver.page_source, "html.parser")
     images = soup.find_all('img')
     videos = soup.find_all('video')
@@ -95,7 +102,7 @@ def get_and_load_images_to_s3(post_id, page_id, creds):
     for img in images:
         src = img['src']
         if src and src.find('facebook.com/security') == -1:
-            if src != page_profile_picture_url:
+            if src != page_profile_picture_url and src.find(profile_picture_url) == -1:
                 print('FOUND   src ----', src)
                 print('PROFILE src ----', page_profile_picture_url)
                 www_links.add(src)
@@ -112,5 +119,5 @@ def get_and_load_images_to_s3(post_id, page_id, creds):
             aws_link = 'https://fblibclone.s3.eu-central-1.amazonaws.com/' + uploaded
             aws_links.append(aws_link)
             i += 1
-    driver.quit()
+
     return aws_links, www_links, ad_info
