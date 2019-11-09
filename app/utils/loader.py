@@ -2,7 +2,9 @@ from flask import render_template, request, session, g, jsonify
 from sqlalchemy import exc
 import psycopg2
 import json
-from app.utils.functions import cast_date, extract_id, parse_bounds, parse_distr
+from app.utils.functions import cast_date, extract_id, parse_bounds, parse_distr,\
+    finished_main_scripts
+
 from app import db
 from app.service.models import Adverts, Advertisers, Impressions,\
     Demographic_distribution, Region_distribution
@@ -46,6 +48,8 @@ def parse_and_load_adverts(details, country):
                 ad_delivery_stop_time = cast_date(obj.get('ad_delivery_stop_time', None))
 
                 if exists:
+                    if finished_main_scripts(): # if the script is called later in the day to get new ads
+                        continue
                     impression.advert_id = exists.id
                     if exists.ad_delivery_stop_time is None and ad_delivery_stop_time:
                         # print('Updating ad_delivery_stop_time to', ad_delivery_stop_time, "id=", exists.id)

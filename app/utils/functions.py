@@ -26,5 +26,8 @@ def parse_distr(obj, key):
         return [obj[k] for k in keys]
     return [None for k in keys]
 
+def finished_main_scripts():
+    return datetime.now().hour > 6
+
 def show_users():
     print('running SCHEDULER_JOB',datetime.now())

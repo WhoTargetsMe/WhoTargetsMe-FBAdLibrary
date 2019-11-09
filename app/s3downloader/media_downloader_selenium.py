@@ -103,8 +103,8 @@ def get_and_load_images_to_s3(post_id, page_id, creds, driver):
         src = img['src']
         if src and src.find('facebook.com/security') == -1:
             if src != page_profile_picture_url and src.find(profile_picture_url) == -1:
-                print('FOUND   src ----', src)
-                print('PROFILE src ----', page_profile_picture_url)
+                # print('FOUND   src ----', src)
+                # print('PROFILE src ----', page_profile_picture_url)
                 www_links.add(src)
 
     for vid in videos:

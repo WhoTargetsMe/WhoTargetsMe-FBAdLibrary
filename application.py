@@ -6,6 +6,7 @@ from apscheduler.schedulers.background import BackgroundScheduler
 from app.fbconnector.ad_downloader import download_ads
 from app.service.models import Advertisers, Adverts, Tokens
 from app.utils.loader import parse_and_load_adverts
+from app.utils.functions import finished_main_scripts
 from flask import render_template, request, session, g, jsonify
 from flask import current_app as ap
 from sqlalchemy import exc, func
@@ -25,10 +26,12 @@ def call_loader(country='GB'):
 
         advertisers = Advertisers.query.all()
         IDS = [int(a.page_id) for a in advertisers if a.country == country]
-        print('FETCHING IDS ...', IDS)
-
         adverts = db.session.query(Adverts.page_id, func.count(Adverts.page_id)).group_by(Adverts.page_id).all()
         single_call_lst = [int(a[0]) for a in adverts if a[1] < (ADS_PER_PAGE - 100)]
+        if finished_main_scripts():
+            ordered_ids = sorted([a for a in adverts], key=lambda k: k[1], reverse=True)
+            IDS = [int(a[0]) for a in ordered_ids][:2] #50
+        print('FETCHING IDS ...', IDS)
         print('single_call_lst', single_call_lst)
 
 
@@ -67,7 +70,7 @@ application = create_app(PARAMS['ENV'])
 scheduler = BackgroundScheduler()
 # interval style
 # scheduler.add_job(func=call_loader, trigger='interval', seconds=INTERVAL, misfire_grace_time=10)
-scheduler.add_job(call_loader, 'cron', month='*', day='*', hour='1', minute='1')
+scheduler.add_job(call_loader, 'cron', month='*', day='*', hour='7,10,15,19', minute='1')
 scheduler.start()
 
 if __name__ == '__main__':
