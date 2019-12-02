@@ -7,6 +7,12 @@ migrations
 fbconnector/drafts
 .idea/*
 *.pyc
+.vscode
+
+# virtualenv resources
+bin
+include
+lib
 
 # Elastic Beanstalk Files
 .elasticbeanstalk/*
