@@ -275,6 +275,9 @@ def skip_ad(fb_ad):
 # Main
 def parse_and_insert(fb_ads, country):
 
+    if not fb_ads or len(fb_ads) is 0: 
+        return
+
     adverts = bulk_insert_adverts(fb_ads, country)
 
     impressions = bulk_insert_impressions(fb_ads, adverts, country)
