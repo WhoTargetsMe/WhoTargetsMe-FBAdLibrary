@@ -128,46 +128,55 @@ def bulk_insert_impressions(fb_ads, adverts, country):
     # this will be much easier if we have a hash table
     post_advert_id_map = {a['post_id']:a['id'] for a in adverts}
 
-    # build impressions to insert
-    impressions = []
-    for fb_ad in fb_ads:
-        # We stop adding impression data when we have ad_delivery_stop_time
-        # FIXME: we need to check the stop time and recording impressions until then
-        if not skip_ad(fb_ad):
-            post_id = extract_id(fb_ad.get('ad_snapshot_url'))
-            ad_id = post_advert_id_map.get(post_id)
-            impressions.append(impression_dict(fb_ad, ad_id, country))
+    try:
+        # build impressions to insert
+        impressions = []
+        for fb_ad in fb_ads:
+            # We stop adding impression data when we have ad_delivery_stop_time
+            # FIXME: we need to check the stop time and recording impressions until then
+            if not skip_ad(fb_ad):
+                post_id = extract_id(fb_ad.get('ad_snapshot_url'))
+                ad_id = post_advert_id_map.get(post_id)
+                impressions.append(impression_dict(fb_ad, ad_id, country))
+            
+        connection.execute(
+            pg_insert(Impressions.__table__).returning(Impressions.__table__.columns.id),
+            impressions
+        )
         
-    connection.execute(
-        pg_insert(Impressions.__table__).returning(Impressions.__table__.columns.id),
-        impressions
-    )
+        # get result again... would be much simpler if psycopg2 respected returning.
+        # we need to do some filtering by latest for these post_ids
+        statement = text("""SELECT id, advert_id, post_id, created_at
+                        FROM impressions JOIN
+                            (SELECT MAX(created_at) created_at, post_id 
+                                FROM impressions 
+                                WHERE post_id IN :fb_ads_post_ids
+                                GROUP BY post_id 
+                            ) AS max_date
+                        USING (post_id, created_at)""")
+
+        fb_ads_post_ids = { extract_id(ad['ad_snapshot_url']) for ad in fb_ads }
+
+        results = connection.execute(
+                statement,
+                fb_ads_post_ids=tuple(fb_ads_post_ids) # tuple generates (1,2,3) output for IN
+            ).fetchall()
+
+        # reformat to look like you'd expect [{'id':1, 'advert_id':234, ... etc }]
+        impressions = []
+        for r in results:
+            impressions.append(dict(id=r[0], advert_id=r[1], post_id=r[2], created_at=r[3]))
+        
+        return impressions
+
     
-    # get result again... would be much simpler if psycopg2 respected returning.
-    # we need to do some filtering by latest for these post_ids
-    statement = text("""SELECT id, advert_id, post_id, created_at
-                    FROM impressions JOIN
-                        (SELECT MAX(created_at) created_at, post_id 
-                            FROM impressions 
-                            WHERE post_id IN :fb_ads_post_ids
-                            GROUP BY post_id 
-                        ) AS max_date
-                    USING (post_id, created_at)""")
+    except:
+        e = sys.exc_info()[0]
 
-    fb_ads_post_ids = { extract_id(ad['ad_snapshot_url']) for ad in fb_ads }
+        print('error inserting impressions exception ---->>>', e)
+        print('error inserting impressions, impressions ---->>>', fb_ads)
 
-    results = connection.execute(
-            statement,
-            fb_ads_post_ids=tuple(fb_ads_post_ids) # tuple generates (1,2,3) output for IN
-        ).fetchall()
-
-    # reformat to look like you'd expect [{'id':1, 'advert_id':234, ... etc }]
-    impressions = []
-    for r in results:
-        impressions.append(dict(id=r[0], advert_id=r[1], post_id=r[2], created_at=r[3]))
-    
-    return impressions
-
+        return []
 
 def demographic_distributions_dict(fb_demographic_distribution, impression_id): 
     percentage, age, gender = parse_distr(fb_demographic_distribution, 'dem')
