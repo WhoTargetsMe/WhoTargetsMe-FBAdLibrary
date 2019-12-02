@@ -6,10 +6,14 @@ from flask import current_app as app
 from sqlalchemy import create_engine
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import select, text
-import sys
 
 # fixed size advert dict for core bulk insert
 def advert_dict(fb_ad, country):
+    if not country: 
+        raise Exception('missing country')
+    if not extract_id(fb_ad.get('ad_snapshot_url')): 
+        raise Exception('cannot extract id')
+
     return {   
         'ad_creation_time': fb_ad.get('ad_creation_time', None),
         'ad_creative_body': fb_ad.get('ad_creative_body', None),
@@ -24,9 +28,9 @@ def advert_dict(fb_ad, country):
         'currency': fb_ad.get('currency', None),
         'funding_entity': fb_ad.get('funding_entity', None),
         'image_link': fb_ad.get('image_link', None),
-        'page_id': fb_ad.get('page_id', None),
-        'page_name': fb_ad.get('page_name', None),
-        'post_id': extract_id(fb_ad.get('ad_snapshot_url'))
+        'page_id': fb_ad['page_id'],
+        'page_name': fb_ad['page_name'],
+        'post_id': extract_id(fb_ad['ad_snapshot_url'])
     }
 
 
@@ -62,9 +66,16 @@ def bulk_insert_adverts(fb_ads, country):
     # build ads
     ads = []
     for fb_ad in fb_ads:
-        ad = advert_dict(fb_ad, country)
-        if ad['page_id'] and ad['post_id'] and ad['country']:
-            ads.append(ad)
+        if not skip_ad(fb_ad):
+            try:
+                ad = advert_dict(fb_ad, country)
+                ads.append(ad)
+            except Exception as e:
+                print('problem adding fb_ad for advert insert', str(e))
+
+    # if there are no ads, e.g. skip_ad condition is always met, then return
+    if len(ads) is 0: 
+        return []
 
     try:
         connection.execute(
@@ -91,16 +102,19 @@ def bulk_insert_adverts(fb_ads, country):
 
         return adverts
 
-    except:
-        e = sys.exc_info()[0]
-
-        print('error inserting ads exception ---->>>', e)
-        print('error inserting ads, ads ---->>>', fb_ads)
+    except Exception as e :
+        print('error inserting ads ---->>>', str(e))
 
         return []
 
 
+
 def impression_dict(fb_ad, advert_id, country): 
+    if not advert_id: 
+        raise Exception('advert_id required')
+    if not country: 
+        raise Exception('country required')
+
     lower_bound_impressions, upper_bound_impressions = parse_bounds(fb_ad.get('impressions', None))
     lower_bound_spend, upper_bound_spend = parse_bounds(fb_ad.get('spend', None))
 
@@ -111,8 +125,8 @@ def impression_dict(fb_ad, advert_id, country):
         'impressions': fb_ad.get('impressions', None),
         'lower_bound_impressions': lower_bound_impressions,
         'lower_bound_spend': lower_bound_spend,
-        'page_id': fb_ad.get('page_id', None),
-        'post_id': extract_id(fb_ad.get('ad_snapshot_url')),
+        'page_id': fb_ad['page_id'],
+        'post_id': extract_id(fb_ad['ad_snapshot_url']),
         'region_distribution': fb_ad.get('region_distribution', None),
         'spend': fb_ad.get('spend', None),
         'upper_bound_impressions': upper_bound_impressions,
@@ -128,17 +142,22 @@ def bulk_insert_impressions(fb_ads, adverts, country):
     # this will be much easier if we have a hash table
     post_advert_id_map = {a['post_id']:a['id'] for a in adverts}
 
-    try:
-        # build impressions to insert
-        impressions = []
-        for fb_ad in fb_ads:
-            # We stop adding impression data when we have ad_delivery_stop_time
-            # FIXME: we need to check the stop time and recording impressions until then
-            if not skip_ad(fb_ad):
+    # build impressions to insert
+    impressions = []
+    for fb_ad in fb_ads:
+        if not skip_ad(fb_ad):
+            try:
                 post_id = extract_id(fb_ad.get('ad_snapshot_url'))
                 ad_id = post_advert_id_map.get(post_id)
                 impressions.append(impression_dict(fb_ad, ad_id, country))
-            
+            except Exception as e:
+                print('problem adding fb_ad for impression insert', str(e))
+
+    # no records to insert? just return then
+    if len(impressions) is 0:
+        return []
+
+    try:
         connection.execute(
             pg_insert(Impressions.__table__).returning(Impressions.__table__.columns.id),
             impressions
@@ -170,16 +189,18 @@ def bulk_insert_impressions(fb_ads, adverts, country):
         return impressions
 
     
-    except:
-        e = sys.exc_info()[0]
-
-        print('error inserting impressions exception ---->>>', e)
-        print('error inserting impressions, impressions ---->>>', fb_ads)
+    except Exception as e :
+        print('error inserting impressions ---->>>', str(e))
 
         return []
 
+
 def demographic_distributions_dict(fb_demographic_distribution, impression_id): 
+    if not impression_id: 
+        raise Exception('impression_id required')
+
     percentage, age, gender = parse_distr(fb_demographic_distribution, 'dem')
+    
     return {
         'age': age,
         'gender': gender,
@@ -188,77 +209,67 @@ def demographic_distributions_dict(fb_demographic_distribution, impression_id):
     }
 
 
-def bulk_insert_demographic_distributions(fb_ads, impressions):
-    engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'], echo=False, executemany_mode='batch')
-    connection = engine.connect()
-
-    post_impression_id_map = {i['post_id']:i['id'] for i in impressions}
-
-    demographic_distributions = []
-    for fb_ad in fb_ads:
-        if not skip_ad(fb_ad):
-            fb_demographic_distribution = fb_ad.get('demographic_distribution', None)
-            post_id = extract_id(fb_ad.get('ad_snapshot_url'))
-            impression_id = post_impression_id_map.get(post_id)
-
-            # iterate demographic_distribution field
-            if fb_demographic_distribution:
-                for dd in fb_demographic_distribution:
-                    demographic_distributions.append(
-                            demographic_distributions_dict(
-                                dd, 
-                                impression_id
-                            )
-                        )
-    
-    connection.execute(
-        Demographic_distribution.__table__.insert(),
-        demographic_distributions
-    )
-
-    # We don't really need return values here
-    return 'OK'
-
-
 def region_distributions_dict(fb_region_distribution, impression_id): 
+    if not impression_id: 
+        raise Exception('impression_id required')
+
     percentage, region = parse_distr(fb_region_distribution, 'reg')
+    
     return {
         'impression_id': impression_id,
         'percentage': percentage,
         'region': region
     }
 
-def bulk_insert_region_distributions(fb_ads, impressions):
+
+def bulk_insert_distributions(fb_ads, impressions, distribution_type, table):
     engine = create_engine(app.config['SQLALCHEMY_DATABASE_URI'], echo=False, executemany_mode='batch')
     connection = engine.connect()
 
     post_impression_id_map = {i['post_id']:i['id'] for i in impressions}
 
-    region_distributions = []
+    table_dicts = {
+        'demographic_distribution': demographic_distributions_dict,
+        'region_distribution': region_distributions_dict
+    }
+
+    distributions = []
     for fb_ad in fb_ads:
         if not skip_ad(fb_ad):
-            fb_region_distribution = fb_ad.get('region_distribution', None)
-            post_id = extract_id(fb_ad.get('ad_snapshot_url'))
-            impression_id = post_impression_id_map.get(post_id)
+            try:
+                fb_distribution = fb_ad.get(distribution_type, None)
+                post_id = extract_id(fb_ad.get('ad_snapshot_url'))
+                impression_id = post_impression_id_map.get(post_id)
 
-            # iterate region_distribution field
-            if fb_region_distribution:
-                for dd in fb_region_distribution:
-                    region_distributions.append(
-                            region_distributions_dict(
-                                dd, 
-                                impression_id
+                # iterate distribution field
+                if fb_distribution:
+                    for dd in fb_distribution:
+                        distributions.append(
+                                table_dicts[distribution_type](
+                                    dd, 
+                                    impression_id
+                                )
                             )
-                        )
-    
-    connection.execute(
-        Region_distribution.__table__.insert(),
-        region_distributions
-    )
+            except Exception as e:
+                print('cannot add distribution to insert', e, fb_ad)
+        
+    # if there are no distributions, then return
+    if len(distributions) is 0:
+        return []
 
-    # We don't really need return values here
-    return 'OK'
+    try:
+        connection.execute(
+            table,
+            distributions
+        )
 
+        # We don't really need return values here
+        return 'OK'
+
+    except Exception as e :
+        print('error inserting distributions exception ---->>>', str(e))
+
+        return 'NOT OK'
 
 
 # utils
@@ -282,8 +293,7 @@ def parse_and_insert(fb_ads, country):
 
     impressions = bulk_insert_impressions(fb_ads, adverts, country)
 
-    bulk_insert_demographic_distributions(fb_ads, impressions)
-
-    bulk_insert_region_distributions(fb_ads, impressions)
+    bulk_insert_distributions(fb_ads, impressions, 'demographic_distribution', Demographic_distribution.__table__.insert())
+    bulk_insert_distributions(fb_ads, impressions, 'region_distribution', Region_distribution.__table__.insert())
 
     return
