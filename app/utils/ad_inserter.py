@@ -176,13 +176,14 @@ def bulk_insert_demographic_distributions(fb_ads, impressions):
             impression_id = post_impression_id_map.get(post_id)
 
             # iterate demographic_distribution field
-            for dd in fb_demographic_distribution:
-                demographic_distributions.append(
-                        demographic_distributions_dict(
-                            dd, 
-                            impression_id
+            if fb_demographic_distribution:
+                for dd in fb_demographic_distribution:
+                    demographic_distributions.append(
+                            demographic_distributions_dict(
+                                dd, 
+                                impression_id
+                            )
                         )
-                    )
     
     connection.execute(
         Demographic_distribution.__table__.insert(),
@@ -215,13 +216,14 @@ def bulk_insert_region_distributions(fb_ads, impressions):
             impression_id = post_impression_id_map.get(post_id)
 
             # iterate region_distribution field
-            for dd in fb_region_distribution:
-                region_distributions.append(
-                        region_distributions_dict(
-                            dd, 
-                            impression_id
+            if fb_region_distribution:
+                for dd in fb_region_distribution:
+                    region_distributions.append(
+                            region_distributions_dict(
+                                dd, 
+                                impression_id
+                            )
                         )
-                    )
     
     connection.execute(
         Region_distribution.__table__.insert(),
