@@ -6,6 +6,7 @@ from flask import current_app as app
 from sqlalchemy import create_engine
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.sql import select, text
+import sys
 
 # fixed size advert dict for core bulk insert
 def advert_dict(fb_ad, country):
@@ -58,29 +59,45 @@ def bulk_insert_adverts(fb_ads, country):
             }
         )
     
-    connection.execute(
-        statement,
-        [advert_dict(a, country) for a in fb_ads]
-    )
+    # build ads
+    ads = []
+    for fb_ad in fb_ads:
+        ad = advert_dict(fb_ad, country)
+        if ad['page_id'] and ad['post_id'] and ad['country']:
+            ads.append(ad)
 
-    # executemany in psycopg2 doesn't return the value for all rows (even if you 
-    # include a returning statement... like it would in PgSQL... 🤔). 
-    # So we need to refetch this inserted data
+    try:
+        connection.execute(
+            statement,
+            ads
+        )
 
-    # get post_ids to lookup from db... set struct saves removing dupes
-    fb_ads_post_ids = { extract_id(ad['ad_snapshot_url']) for ad in fb_ads }
-    
-    results = connection.execute(
-            select(
-                [Adverts.__table__.columns.id, Adverts.__table__.columns.post_id], 
-                Adverts.__table__.columns.post_id.in_(fb_ads_post_ids)
-            )
-        ).fetchall()
+        # executemany in psycopg2 doesn't return the value for all rows (even if you 
+        # include a returning statement... like it would in PgSQL... 🤔). 
+        # So we need to refetch this inserted data
 
-    # reformat to look kinda like you'd expect [{'id':1, 'post_id':234}]
-    adverts = [dict(id=r[0], post_id=r[1]) for r in results]
-    
-    return adverts
+        # get post_ids to lookup from db... set struct saves removing dupes
+        fb_ads_post_ids = { extract_id(ad['ad_snapshot_url']) for ad in fb_ads }
+        
+        results = connection.execute(
+                select(
+                    [Adverts.__table__.columns.id, Adverts.__table__.columns.post_id], 
+                    Adverts.__table__.columns.post_id.in_(fb_ads_post_ids)
+                )
+            ).fetchall()
+
+        # reformat to look kinda like you'd expect [{'id':1, 'post_id':234}]
+        adverts = [dict(id=r[0], post_id=r[1]) for r in results]
+
+        return adverts
+
+    except:
+        e = sys.exc_info()[0]
+
+        print('error inserting ads exception ---->>>', e)
+        print('error inserting ads, ads ---->>>', fb_ads)
+
+        return []
 
 
 def impression_dict(fb_ad, advert_id, country): 
