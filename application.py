@@ -83,7 +83,7 @@ application = create_app(PARAMS['ENV'])
 scheduler = BackgroundScheduler()
 # interval style
 # scheduler.add_job(func=call_loader, trigger='interval', seconds=INTERVAL, misfire_grace_time=10)
-scheduler.add_job(call_loader, 'cron', month='*', day='*', hour='7,10,15,19', minute='1')
+scheduler.add_job(call_loader, 'cron', month='*', day='*', hour='1,7,10,15,19', minute='1')
 scheduler.start()
 
 if __name__ == '__main__':
