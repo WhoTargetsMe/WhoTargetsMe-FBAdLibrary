@@ -280,7 +280,7 @@ def skip_ad(fb_ad):
 
     # check if the ad's run has finished
     if fb_ad.get('ad_delivery_stop_time', False):
-        ad_delivery_stop_time = datetime.strptime(fb_ad.get('ad_delivery_stop_time'), "%Y-%m-%dT%H:%M:%S%z")
+        ad_delivery_stop_time = cast_date(fb_ad.get('ad_delivery_stop_time'))
         has_finished_run = (ad_delivery_stop_time < datetime.now(timezone.utc))
         should_skip = has_finished_run
 
