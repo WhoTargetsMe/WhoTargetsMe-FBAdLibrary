@@ -1,7 +1,7 @@
 from app import db
 from app.service.models import Adverts, Advertisers, Impressions, Demographic_distribution, Region_distribution
 from app.utils.functions import cast_date, extract_id, parse_bounds, parse_distr, finished_main_scripts
-from datetime import datetime
+from datetime import datetime, timezone
 from flask import current_app as app
 from sqlalchemy import create_engine
 from sqlalchemy.dialects.postgresql import insert as pg_insert
@@ -43,10 +43,11 @@ def bulk_insert_adverts(fb_ads, country):
     # https://docs.sqlalchemy.org/en/13/_modules/examples/performance/bulk_inserts.html
     # https://github.com/zzzeek/sqlalchemy/blob/master/doc/build/faq/performance.rst#user-content-i-m-inserting-400-000-rows-with-the-orm-and-it-s-really-slow
     #
-    # Compose an insert statement we can pass in to execut with a dictionary of items. 
-    #   - generic insert: Adverts.__table__.insert(),
-    #   - postgres insert: pg_insert(Adverts.__table__).on_conflict_do_nothing(),
-    #   - or... insert or update selected columns using posgres ON CONFLICT
+    # Compose an insert statement we can pass to `execute` with a dictionary of items. 
+    # Options:
+    #   1. generic insert: Adverts.__table__.insert(),
+    #   2. postgres insert: pg_insert(Adverts.__table__).on_conflict_do_nothing(),
+    #   3. or... insert or update selected columns using posgres ON CONFLICT
     #
     # INSERT INTO advertisers (post_id, country, page_name)
     # VALUES ($1, $2, $3)
@@ -59,6 +60,7 @@ def bulk_insert_adverts(fb_ads, country):
             constraint='adverts_post_id_key',
             set_={
                 'ad_delivery_stop_time': statement.excluded.ad_delivery_stop_time,
+                'ad_delivery_start_time': statement.excluded.ad_delivery_start_time,
                 'updated_at': datetime.now() # this will always set... do we want that?
             }
         )
@@ -277,8 +279,10 @@ def skip_ad(fb_ad):
     should_skip = False
 
     # check if the ad's run has finished
-    # FIXME - this should compare date
-    should_skip = bool(fb_ad.get('ad_delivery_stop_time', False))
+    if fb_ad.get('ad_delivery_stop_time', False):
+        ad_delivery_stop_time = datetime.strptime(fb_ad.get('ad_delivery_stop_time'), "%Y-%m-%dT%H:%M:%S%z")
+        has_finished_run = (ad_delivery_stop_time < datetime.now(timezone.utc))
+        should_skip = has_finished_run
 
     return should_skip
 
