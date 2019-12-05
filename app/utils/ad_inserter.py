@@ -59,21 +59,26 @@ def bulk_insert_adverts(fb_ads, country):
     statement = statement.on_conflict_do_update(
             constraint='adverts_post_id_key',
             set_={
-                'ad_delivery_stop_time': statement.excluded.ad_delivery_stop_time,
+                'ad_creative_body': statement.excluded.ad_creative_body,
+                'ad_creative_link_caption': statement.excluded.ad_creative_link_caption,
+                'ad_creative_link_description': statement.excluded.ad_creative_link_description,
+                'ad_creative_link_title': statement.excluded.ad_creative_link_title,
                 'ad_delivery_start_time': statement.excluded.ad_delivery_start_time,
-                'updated_at': datetime.now() # this will always set... do we want that?
+                'ad_delivery_stop_time': statement.excluded.ad_delivery_stop_time,
+                'ad_snapshot_url': statement.excluded.ad_snapshot_url,
+
+                'updated_at': datetime.now() 
             }
         )
     
     # build ads
     ads = []
     for fb_ad in fb_ads:
-        if not skip_ad(fb_ad):
-            try:
-                ad = advert_dict(fb_ad, country)
-                ads.append(ad)
-            except Exception as e:
-                print('problem adding fb_ad for advert insert', str(e))
+        try:
+            ad = advert_dict(fb_ad, country)
+            ads.append(ad)
+        except Exception as e:
+            print('problem adding fb_ad for advert insert', str(e))
 
     # if there are no ads, e.g. skip_ad condition is always met, then return
     if len(ads) is 0: 
