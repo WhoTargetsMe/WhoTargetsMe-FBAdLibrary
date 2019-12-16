@@ -164,9 +164,12 @@ def bulk_insert_impressions(fb_ads, adverts, country):
     if len(impressions) is 0:
         return []
 
+    statement = pg_insert(Impressions.__table__).returning(Impressions.__table__.columns.id)
+    statement = statement.on_conflict_do_nothing()
+
     try:
         connection.execute(
-            pg_insert(Impressions.__table__).returning(Impressions.__table__.columns.id),
+            statement,
             impressions
         )
         
@@ -264,9 +267,12 @@ def bulk_insert_distributions(fb_ads, impressions, distribution_type, table):
     if len(distributions) is 0:
         return []
 
+    statement = pg_insert(table)
+    statement = statement.on_conflict_do_nothing()
+
     try:
         connection.execute(
-            table,
+            statement,
             distributions
         )
 
@@ -302,7 +308,7 @@ def parse_and_insert(fb_ads, country):
 
     impressions = bulk_insert_impressions(fb_ads, adverts, country)
 
-    bulk_insert_distributions(fb_ads, impressions, 'demographic_distribution', Demographic_distribution.__table__.insert())
-    bulk_insert_distributions(fb_ads, impressions, 'region_distribution', Region_distribution.__table__.insert())
+    bulk_insert_distributions(fb_ads, impressions, 'demographic_distribution', Demographic_distribution.__table__)
+    bulk_insert_distributions(fb_ads, impressions, 'region_distribution', Region_distribution.__table__)
 
     return
