@@ -11,7 +11,7 @@ from sqlalchemy import exc, func
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 from time import sleep
 
 def get_long_token():
@@ -120,20 +120,18 @@ def refresh_token():
     url = "https://graph.facebook.com/v4.0/oauth/access_token?grant_type=fb_exchange_token&client_id=" +\
         APP_ID + "&client_secret=" + APP_SECRET +\
         "&fb_exchange_token=" + SHORT_TOKEN
+
     r = requests.get(url)
     details = r.json()
-    LONG_TOKEN = details['access_token']
     seconds = details['expires_in']
-    expires_on = datetime.now() + timedelta(seconds=seconds)
-    item = Tokens(
-        SHORT_TOKEN,
-        LONG_TOKEN,
-        latest_record.short_last_updated_at,
-        datetime.now(),
-        expires_on
-        )
-    db.session.add(item)
+
+    latest_record.long_token = details['access_token']
+    latest_record.long_last_updated_at = datetime.now()
+    latest_record.long_token_expires_on = datetime.now() + timedelta(seconds=seconds)
+
     db.session.commit()
+
+    return 'OK'
 
 @main.route('/media', methods=['GET'])
 def download_media():
