@@ -1,9 +1,9 @@
 from app import db
 from datetime import datetime
-from sqlalchemy.types import TypeDecorator, VARCHAR
 from sqlalchemy.ext.mutable import Mutable
 from sqlalchemy.orm import relationship, backref
 from sqlalchemy.schema import UniqueConstraint
+from sqlalchemy.types import TypeDecorator, VARCHAR
 import json
 
 class JSONEncodedDict(TypeDecorator):
@@ -135,7 +135,7 @@ class Impressions(db.Model):
     dd = relationship("Demographic_distribution", cascade="all, delete-orphan", backref='impressions')
     rd = relationship("Region_distribution", cascade="all, delete-orphan", backref='impressions')
 
-    __table_args__ = (UniqueConstraint('post_id', 'impressions', name='ix_unique_post_id_impressions'),)
+    __table_args__ = (UniqueConstraint('post_id', 'impressions', 'spend', 'region_distribution', 'demographic_distribution', name='ix_unique_post_id_impressions_spend_region_demographic'),)
 
     def __init__(self, advert_id, page_id, post_id, country, demographic_distribution, region_distribution,\
         impressions, lower_bound_impressions, upper_bound_impressions, spend, lower_bound_spend,\
@@ -169,7 +169,7 @@ class Demographic_distribution(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
     # impr = relationship("Impressions", backref=backref("dd", cascade="all, delete-orphan"))
 
-    __table_args__ = (UniqueConstraint('impression_id', 'age', 'gender', name='ix_unique_impression_id_age_gender'),)
+    __table_args__ = (UniqueConstraint('impression_id', 'age', 'gender', 'percentage', name='ix_unique_impression_id_age_gender_percentage'),)
 
     def __init__(self, impression_id, percentage, age, gender):
         self.impression_id = impression_id
@@ -191,7 +191,7 @@ class Region_distribution(db.Model):
     updated_at = db.Column(db.DateTime(timezone=True), default=datetime.now, onupdate=datetime.now)
     # impr = relationship("Impressions", backref=backref("rd", cascade="all, delete-orphan"))
 
-    __table_args__ = (UniqueConstraint('impression_id', 'region', name='ix_unique_impression_id_region'),)
+    __table_args__ = (UniqueConstraint('impression_id', 'region', 'percentage', name='ix_unique_impression_id_region_percentage'),)
 
     def __init__(self, impression_id, percentage, region):
         self.impression_id = impression_id
