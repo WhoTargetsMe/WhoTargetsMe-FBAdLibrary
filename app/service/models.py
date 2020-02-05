@@ -125,9 +125,9 @@ class Impressions(db.Model):
     post_id = db.Column(db.String(25), nullable=False, index=True)
     country = db.Column(db.String(10), nullable=False) # GB,US...
     demographic_distribution = db.Column(db.JSON, nullable=True) #raw value
-    _demographic_distribution_text = db.Column(db.Text)
+    _demographic_distribution_hash = db.Column(db.Text)
     region_distribution = db.Column(db.JSON, nullable=True) #raw value
-    _region_distribution_text = db.Column(db.Text)
+    _region_distribution_hash = db.Column(db.Text)
     impressions = db.Column(JSONEncodedDict, nullable=True) #raw value
     spend = db.Column(JSONEncodedDict, nullable=True) #raw value
     lower_bound_impressions = db.Column(db.String(25), nullable=True) #parsed
@@ -140,7 +140,7 @@ class Impressions(db.Model):
     rd = relationship("Region_distribution", cascade="all, delete-orphan", backref='impressions')
 
     __table_args__ = (
-        UniqueConstraint('post_id', 'impressions', 'spend', '_region_distribution_text', '_demographic_distribution_text', 
+        UniqueConstraint('post_id', 'impressions', 'spend', '_region_distribution_hash', '_demographic_distribution_hash', 
             name='ix_unique_post_id_impressions_spend_region_demographic'),
         )
 
