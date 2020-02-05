@@ -1,18 +1,19 @@
-from app.service import main
-from app.fbconnector.ad_downloader import download_ads
 from app import db
-from app.service.models import Adverts, Advertisers, Impressions, Tokens, Media
-from app.utils.loader import parse_and_load_adverts
+from app.fbconnector.ad_downloader import download_ads
 from app.s3downloader.media_downloader_selenium import get_and_load_images_to_s3
-
-from flask import render_template, request, session, g, jsonify
+from app.service import main
+from app.service.models import Adverts, Advertisers, Impressions, Tokens, Media
+from app.utils.ad_inserter import parse_and_insert
+from app.utils.functions import finished_main_scripts
+from app.utils.loader import parse_and_load_adverts
+from datetime import datetime, timedelta
 from flask import current_app as ap
-from sqlalchemy import exc, func
+from flask import render_template, request, session, g, jsonify
 from selenium import webdriver
 from selenium.webdriver.support.ui import WebDriverWait
-import requests
-from datetime import datetime, timedelta
+from sqlalchemy import exc, func
 from time import sleep
+import requests
 
 def get_long_token():
     latest_record = db.session.query(Tokens).order_by(Tokens.id.desc()).first()
@@ -23,6 +24,56 @@ def get_long_token():
 def get_test_data():
     x = requests.get('https://reqres.in/api/users?page=2') #mock request
     return '<h1> the greeting is: {0} </h1>'.format(x.text)
+
+@main.route('/callloader', methods=['POST'])
+def call_loader(country='GB'):
+    with ap.app_context():
+        print('starting loading job', datetime.now())
+        
+        # Get config to make request to FB library
+        API_VERSION = ap.config['API_VERSION']
+        PAGES_BETWEEN_STORING = ap.config['PAGES_BETWEEN_STORING']
+        ADS_PER_PAGE = ap.config['ADS_PER_PAGE']
+        latest_record = db.session.query(Tokens).order_by(Tokens.id.desc()).first()
+        LONG_TOKEN = latest_record.long_token
+
+        # get our predefined advertisers
+        advertisers = Advertisers.query.all()
+        advertiser_ids = [int(a.page_id) for a in advertisers if a.country == country]
+        
+        # get the most frequent advertisers, based on previously saved adverts
+        single_call_lst = []
+        adverts = db.session.query(Adverts.page_id, func.count(Adverts.page_id)).group_by(Adverts.page_id).all()
+        single_call_lst = [int(a[0]) for a in adverts if a[1] < (ADS_PER_PAGE - 100)]
+        ordered_ids = sorted([a for a in adverts], key=lambda k: k[1], reverse=True)
+        frequent_advertiser_ids = [int(a[0]) for a in ordered_ids][:2] #50
+
+        # select which advertiser ids set to use, based on... time of day?
+        if finished_main_scripts():
+            IDS = frequent_advertiser_ids
+        else:
+            IDS = advertiser_ids
+
+        print('FETCHING IDS ...', IDS)
+        print('single_call_lst', single_call_lst)
+
+        for ID in IDS:
+            # Iteratively download and store ads
+            next_page = 'start'
+            page = 0
+            single_call = ID in single_call_lst
+            while next_page:
+                print('...CRON...Starting download from FB library.................', ID, 'time=', datetime.now())
+                body, next_page = download_ads(API_VERSION, LONG_TOKEN,\
+                    PAGES_BETWEEN_STORING, ADS_PER_PAGE, [ID], country, next_page, single_call)
+                
+                print('...CRON.....Uploading data to DB....................', ID, 'page=', page, 'time=', datetime.now())
+                # parse_and_load_adverts(body, country)
+                parse_and_insert(body, country)
+
+                page += 1
+            print('...CRON...Finished upload to db.............................', ID, 'time=', datetime.now())
+        return '<h1> Advertisers: {0} </h1>'.format(IDS)
 
 # add new advertisers to the db
 @main.route('/add/advertisers', methods=['POST', 'PUT'])
