@@ -1,7 +1,7 @@
 _run.py
 **/__pycache__/
 .DS_Store
-config/dev.py
+config/development.py
 config/aws.py
 fbconnector/drafts
 .idea/*
@@ -9,11 +9,4 @@ fbconnector/drafts
 .vscode
 
 # virtualenv resources
-bin
-include
-lib
-
-# Elastic Beanstalk Files
-.elasticbeanstalk/*
-!.elasticbeanstalk/*.cfg.yml
-!.elasticbeanstalk/*.global.yml
+venv

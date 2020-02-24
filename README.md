@@ -1,40 +1,45 @@
-FB LIB CLONE TOOL
+# Facebook Ads Library API clone tool
 
-1. Install python 3.6.5 (pip should be installed authomatically)
-2. Install virtualenv
+## Purpose
 
-3. Create and activate virtualenv: from root directory:
-virtualenv myenv
-source myenv/bin/active
-cd myenv
-git clone repo to myenv
+As part of a transparency effort, Facebook provides an API to review adverts
+that have been posted to their platform. Though they provide a UI to look
+at this data, it's important for transparency focused organisations, such as
+Who Targets Me, to be able to review this in different ways. To that end, we
+created this tool.
 
-4. Install libraries
-pip install -r requirements.txt
+## Install
 
-5. Create Postgres DB
-- Install postgres
-- Create postgres admin and password
+### Requirements
 
-- Log as admin
-psql postgres -U admin
+Python 3, PostgreSQL, a Facebook developer account
 
-- Create database
-CREATE DATABASE dbname
+### Install dependencies
 
-6. Init DB and set track for migrations
-TEMPORARILY: change line 6 in manage.py to
-```
-flask_app = create_app('prod')
-```
-if intend to run with prod config. Default config is 'dev'
+- `virtualenv venv`
+- `source venv/bin/active`
+- `pip install -r requirements.txt`
 
-7. Run the project
-python run.py ENV=dev
+### Create Postgres DB to store results
 
-- locally will run on localhost:5000
+- Create a database and ensure it's details are in you config
 
-8. Sample calls
+### Running the project
+
+The project makes use of `FLASK_ENV` with default of `production` for config
+switching. Options are `development` or `production`.
+
+You could `export FLASK_ENV=development` if you want to always use that.
+
+Make sure your details are correct in config/<FLASK_ENV>.py
+
+For the first run, `flask db migrate`
+
+Subsequent runs are `flask run`, which run locally on localhost:5000
+
+## Usage
+
+### Sample calls
 
 - Add/update advertisers
 
@@ -42,6 +47,7 @@ POST, PUT {{url}}/add/advertisers (page_id cannot be updated - POST will raise, 
 
 Example: {{url}}/add/advertisers
 Example body:
+
 ```
 {"advertisers":
     [
@@ -50,7 +56,7 @@ Example body:
 }
 ```
 
-- Load all ads by given advertiser or for country
+### Load all ads by given advertiser or for country
 
 GET {{url}}/loadall/<country>/<advertiser_id>
 
@@ -58,12 +64,18 @@ Example (load by page_id): {{url}}/loadall/GB/8807334278
 
 Example (load all for country): {{url}}/loadall/GB/all
 
+## Troubleshooting
 
-9. After any schema change in the app need to migrate
+### psycopg2
 
-- python manage.py db init
-- python manage.py db migrate
-- python manage.py db upgrade
+Problems installing `psycopg2`?
 
-For help:
-- python manage.py db --help
+Make sure you have `pg_client`. Just run that on your CLI to test.
+
+Maybe clang error `library not found for -lssl`? Maybe you installed openssl via
+brew, so set env vars for LDFLAGS and CPPFLAGS.
+
+```
+export LDFLAGS="-L/usr/local/opt/openssl/lib"
+export CPPFLAGS="-I/usr/local/opt/openssl/include"
+```
