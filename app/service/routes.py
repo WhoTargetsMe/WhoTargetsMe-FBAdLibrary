@@ -195,7 +195,7 @@ def download_media():
         'access_key': ap.config['ACCESS_KEY'],
         'secret_key': ap.config['SECRET_KEY']
     }
-    if ap.config['ENV_LABEL'] == 'dev':
+    if ap.config['FLASK_ENV'] == 'development':
         driver = webdriver.Chrome()
         login_url = 'https://www.facebook.com'
         driver.get(login_url)
@@ -205,7 +205,7 @@ def download_media():
         # passwd = driver.find_element_by_id("pass")
         # button.click()
 
-    elif ap.config['ENV_LABEL'] == 'prod':
+    elif ap.config['FLASK_ENV'] == 'production':
         DRIVER_PATH = '/usr/bin/chromedriver'
         options = webdriver.ChromeOptions()
         options.add_argument("--remote-debugging-port=9222")

@@ -1,4 +1,4 @@
-"""empty message
+"""Add unique constraints on demographic and regional distributions
 
 Revision ID: 6c6cc9aba03c
 Revises: 785df91f72ae
