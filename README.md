@@ -17,7 +17,7 @@ Python 3, PostgreSQL, a Facebook developer account
 ### Install dependencies
 
 - `virtualenv venv`
-- `source venv/bin/active`
+- `source venv/bin/activate`
 - `pip install -r requirements.txt`
 
 ### Create Postgres DB to store results
@@ -33,9 +33,9 @@ You could `export FLASK_ENV=development` if you want to always use that.
 
 Make sure your details are correct in config/<FLASK_ENV>.py
 
-For the first run, `flask db migrate`
+For the first run, `FLASK_ENV=development flask db upgrade`
 
-Subsequent runs are `flask run`, which run locally on localhost:5000
+Subsequent runs are `FLASK_ENV=development flask run`, which run locally on localhost:5000
 
 ## Usage
 
