@@ -5,7 +5,6 @@ DEBUG=True
 ACCESS_KEY=_ACCESS_KEY
 SECRET_KEY=_SECRET_KEY
 # postgresql://<username>:<userpassword>@<url>/<dbname>
-# postgresql://postgres:***REMOVED***@wtm-ad-library-stage.cfhyzec3tjdz.eu-central-1.rds.amazonaws.com/fbadlibraryclone
 # SQLALCHEMY_DATABASE_URI=os.environ['DATABASE_URL']
 SQLALCHEMY_DATABASE_URI=_SQLALCHEMY_DATABASE_URI
 SQLALCHEMY_TRACK_MODIFICATIONS=False
