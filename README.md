@@ -12,7 +12,7 @@ created this tool.
 
 ### Requirements
 
-Python 3, PostgreSQL, a Facebook developer account
+Python 3, PostgreSQL, a Facebook developer account and a Facebook access token.
 
 ### Install dependencies
 
@@ -38,6 +38,13 @@ For the first run, `FLASK_ENV=development flask db upgrade`
 Subsequent runs are `FLASK_ENV=development flask run`, which run locally on localhost:5000
 
 ## Usage
+
+Before you do anything, **you're going to need Facebook token**.
+
+We won't got through the steps of getting a token here, but ideally you want a
+long token that can last a couple of months.
+
+You'll want to add that token to `tokens` table in the database.
 
 ### Sample calls
 
