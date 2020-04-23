@@ -1,4 +1,7 @@
-from app.fbconnector.facebook import GraphAPI, GraphAPIError
+from app import db
+from app.service.models import Tokens
+from facebook import GraphAPI, GraphAPIError
+from flask import current_app as app
 from urllib.parse import urlsplit, parse_qs
 import os
 import sys
@@ -18,6 +21,11 @@ Please note this isn't a per-user limit. Any individual user can make more than 
 # https://medium.com/@DrGabrielA81/python-how-getting-facebook-data-and-insights-using-facebook-sdk-9de14d3c12fb
 
 
+def get_long_token():
+    latest_record = db.session.query(Tokens).order_by(Tokens.id.desc()).first()
+    return latest_record.long_token
+
+
 def build_args(adspp, url=None):
     args = {}
     if url:
@@ -31,27 +39,22 @@ def build_args(adspp, url=None):
     return args
 
 
-def download_ads(
-    API_VERSION,
-    LONG_TOKEN,
-    PAGES_BETWEEN_STORING,
-    ADS_PER_PAGE,
-    IDS,
-    country,
-    next_page,
-    single_call,
-):
+def download_ads(page_ids, next_page, country="ALL", pages=False):
+
+    API_VERSION = app.config["API_VERSION"]
+    ADS_PER_PAGE = app.config["ADS_PER_PAGE"]
+    PAGES_BETWEEN_STORING = pages or app.config["PAGES_BETWEEN_STORING"]
 
     graph = GraphAPI(version=API_VERSION)
 
     args = dict()
-    args["access_token"] = LONG_TOKEN
+    args["access_token"] = get_long_token()
     args["search_terms"] = ""
     args["ad_type"] = "POLITICAL_AND_ISSUE_ADS"
     args["ad_reached_countries"] = [country]
     args[
         "search_page_ids"
-    ] = IDS  # list of specific page (advertiser) ids if we know them
+    ] = page_ids  # list of specific page (advertiser) ids if we know them
     args["ad_active_status"] = "ALL"
     args[
         "fields"
@@ -66,26 +69,25 @@ def download_ads(
             r = graph.request(method, args)
             data = r.get("data", [])
             result.extend(data)
-            next_page = r.get("paging", {}).get("next")
-            print("-------RESULTS----------", "iterations=", i, "len data=", len(data))
-            if single_call:
-                return result, None
+            next_page = r.get("paging", {}).get("next", None)
+            # print("-------RESULTS----------", "iterations=", i, "len data=", len(data))
 
         except Exception as e:
             print("Error -+", e.message)
             print("Error ->", sys.exc_info()[0].message)
 
-    while i < PAGES_BETWEEN_STORING:
-        argsi = build_args(ADS_PER_PAGE, url=next_page)
-        try:
-            print("=======ARGS", argsi["search_page_ids"], argsi["after"])
-        except:
-            return result, None
-        r = graph.request(method, argsi)
-        data = r.get("data", [])
-        result.extend(data)
-        next_page = r.get("paging", {}).get("next", None)
-        i += 1
-        print("-------RESULTS----------", "iterations=", i, "len data=", len(data))
+    else:
+        while i <= PAGES_BETWEEN_STORING:
+            argsi = build_args(ADS_PER_PAGE, url=next_page)
+            try:
+                print("=======ARGS", argsi["search_page_ids"], argsi["after"])
+            except:
+                return result, None
+            r = graph.request(method, argsi)
+            data = r.get("data", [])
+            result.extend(data)
+            next_page = r.get("paging", {}).get("next", None)
+            i += 1
+            # print("-------RESULTS----------", "iterations=", i, "len data=", len(data))
 
     return result, next_page

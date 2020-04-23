@@ -1,25 +1,18 @@
 from app import db
-from app.fbconnector.ad_downloader import download_ads
 from app.s3downloader.media_downloader_selenium import get_and_load_images_to_s3
 from app.service import main
-from app.service.models import Adverts, Advertisers, Impressions, Tokens, Media
+from app.service.models import Adverts, Advertisers, Tokens, Media
+from app.utils.ad_downloader import download_ads
 from app.utils.ad_inserter import parse_and_insert
-from app.utils.functions import finished_main_scripts
-from app.utils.loader import parse_and_load_adverts
 from datetime import datetime, timedelta
+from dateutil.parser import parse as dateparse
 from flask import current_app as ap
-from flask import render_template, request, session, g, jsonify
+from flask import request
 from selenium import webdriver
-from selenium.webdriver.support.ui import WebDriverWait
-from sqlalchemy import exc, func
+from sqlalchemy import exc
+from sqlalchemy.sql import text
 from time import sleep
 import requests
-
-
-def get_long_token():
-    latest_record = db.session.query(Tokens).order_by(Tokens.id.desc()).first()
-    return latest_record.long_token
-
 
 # test that backend is working
 @main.route("/test", methods=["GET"])
@@ -28,85 +21,96 @@ def get_test_data():
     return "<h1> the greeting is: {0} </h1>".format(x.text)
 
 
-@main.route("/callloader", methods=["POST"])
-def call_loader(country="US"):
-    with ap.app_context():
-        print("starting loading job", datetime.now())
+def ads_for_page_id(page_id, country, ad_creation_time_min=False):
 
-        # Get config to make request to FB library
-        API_VERSION = ap.config["API_VERSION"]
-        PAGES_BETWEEN_STORING = ap.config["PAGES_BETWEEN_STORING"]
-        ADS_PER_PAGE = ap.config["ADS_PER_PAGE"]
-        latest_record = db.session.query(Tokens).order_by(Tokens.id.desc()).first()
-        LONG_TOKEN = latest_record.long_token
+    next_page = "start"
+    body_count = 0
 
+    while next_page:
 
-        # get our predefined advertisers
-        advertisers = Advertisers.query.all()
-        advertiser_ids = [int(a.page_id) for a in advertisers if a.country == country]
+        body, next_page = download_ads([page_id], next_page, country=country)
+        body_count += len(body)
 
-        # get the most frequent advertisers, based on previously saved adverts
-        single_call_lst = []
-        adverts = (
-            db.session.query(Adverts.page_id, func.count(Adverts.page_id))
-            .group_by(Adverts.page_id)
-            .all()
+        parse_and_insert(body, country)
+
+        """
+        If the minimum ad_creation_time already stored is later than the last in 
+        the body, then we don't need to continue.
+        """
+        if ad_creation_time_min:
+            body_last_ad_creation_time = dateparse(body[-1]["ad_creation_time"])
+            if ad_creation_time_min > body_last_ad_creation_time:
+                next_page = False
+
+    print(
+        "[{0}] Finished page_id: {1}, ad_count: {2}".format(
+            datetime.now(), page_id, body_count
         )
-        single_call_lst = [int(a[0]) for a in adverts if a[1] < (ADS_PER_PAGE - 100)]
-        ordered_ids = sorted([a for a in adverts], key=lambda k: k[1], reverse=True)
-        frequent_advertiser_ids = [int(a[0]) for a in ordered_ids][:2]  # 50
+    )
 
-        # select which advertiser ids set to use, based on... time of day?
-        if finished_main_scripts():
-            IDS = frequent_advertiser_ids
-        else:
-            IDS = advertiser_ids
+    return
 
-        print("FETCHING IDS ...", IDS)
-        print("single_call_lst", single_call_lst)
 
-        for ID in IDS:
-            # Iteratively download and store ads
-            next_page = "start"
-            page = 0
-            single_call = ID in single_call_lst
-            while next_page:
-                print(
-                    "...CRON...Starting download from FB library.................",
-                    ID,
-                    "time=",
-                    datetime.now(),
-                )
-                body, next_page = download_ads(
-                    API_VERSION,
-                    LONG_TOKEN,
-                    PAGES_BETWEEN_STORING,
-                    ADS_PER_PAGE,
-                    [ID],
-                    country,
-                    next_page,
-                    single_call,
-                )
+@main.route("/callloader", methods=["POST"])
+def call_loader(country="US", page_id=False, all_ads=False):
 
-                print(
-                    "...CRON.....Uploading data to DB....................",
-                    ID,
-                    "page=",
-                    page,
-                    "time=",
-                    datetime.now(),
-                )
-                # parse_and_load_adverts(body, country)
-                parse_and_insert(body, country)
+    if request.method == "POST":
+        """ 
+        Country code has two uses:
+        1. Select which advertisers from our db, filtered by country
+        2. Use in FB graph as search criteria "ad_reached_countries"
+        """
+        country = request.form.get("country", country)
 
-                page += 1
-            print(
-                "...CRON...Finished upload to db.............................",
-                ID,
-                "time=",
-                datetime.now(),
+        """ Select single advertiser """
+        page_id = request.form.get("page_id", page_id)
+
+        """ Collect all historical ads, as opposed to max_ad_creation_time """
+        all_ads = request.form.get("all_ads", all_ads)
+
+    with ap.app_context():
+
+        connection = db.engine.connect()
+        statement = text(
+            """
+                SELECT
+                    advertisers.page_id,
+                    advertisers.country,
+                    MAX(adverts.ad_creation_time) AS max_ad_creation_time,
+                    COUNT(adverts.id) AS ad_count
+                FROM
+                    advertisers 
+                    LEFT JOIN adverts ON advertisers.page_id = adverts.page_id
+                WHERE advertisers.country = :country
+                GROUP BY
+                    advertisers.page_id,
+                    advertisers.country
+                ORDER BY
+                    ad_count DESC;
+            """
+        )
+        statement.columns(
+            Advertisers.__table__.columns.page_id,
+            Advertisers.__table__.columns.country,
+            Adverts.__table__.columns.ad_creation_time,
+            Adverts.__table__.columns.id,
+        )
+        results = connection.execute(statement, country=country).fetchall()
+
+        for advertiser in results:
+            # skip if we're being page_id specific. still got to be in db though
+            if page_id and int(page_id) != int(advertiser["page_id"]):
+                continue
+
+            ads_for_page_id(
+                advertiser["page_id"],
+                advertiser["country"],
+                ad_creation_time_min=False
+                if all_ads
+                else advertiser["max_ad_creation_time"],
             )
-        return "<h1> Advertisers: {0} </h1>".format(IDS)
+
+        return {"message": "success"}
 
 
 # add new advertisers to the db
@@ -164,86 +168,18 @@ def add_advertisers():
     return {"advertisers": len(advertisers)}
 
 
-# MAIN LOOP
-# load advertisers by country or country+ID
-@main.route("/loadall/<country>/<advertiser_id>", methods=["GET"])
-def load_data_from_archive(country, advertiser_id):
-    single_call_lst = []
-    # Get config to make request to FB library
-    API_VERSION = ap.config["API_VERSION"]
-    PAGES_BETWEEN_STORING = ap.config["PAGES_BETWEEN_STORING"]
-    ADS_PER_PAGE = ap.config["ADS_PER_PAGE"]
-    LONG_TOKEN = get_long_token()
-
-    if advertiser_id != "all":
-        IDS = [advertiser_id]
-    else:
-        advertisers = Advertisers.query.all()
-        IDS = [int(a.page_id) for a in advertisers if a.country == country]
-        print(advertisers, IDS)
-
-        adverts = (
-            db.session.query(Adverts.page_id, func.count(Adverts.page_id))
-            .group_by(Adverts.page_id)
-            .all()
-        )
-        single_call_lst = [int(a[0]) for a in adverts if a[1] < (ADS_PER_PAGE - 100)]
-        print("single_call_lst", single_call_lst)
-
-    for ID in IDS:
-        # Iteratively download and store ads
-        next_page = "start"
-        page = 0
-        single_call = ID in single_call_lst
-        while next_page:
-            print(
-                "...HTTP...Starting download from FB library.................",
-                ID,
-                "time=",
-                datetime.now(),
-            )
-            body, next_page = download_ads(
-                API_VERSION,
-                LONG_TOKEN,
-                PAGES_BETWEEN_STORING,
-                ADS_PER_PAGE,
-                [ID],
-                country,
-                next_page,
-                single_call,
-            )
-            print(
-                "...HTTP.....Uploading data to DB....................",
-                ID,
-                "page=",
-                page,
-                "time=",
-                datetime.now(),
-            )
-            parse_and_load_adverts(body, country)
-            page += 1
-        print(
-            "...HTTP...Finished upload to db.............................",
-            ID,
-            "time=",
-            datetime.now(),
-        )
-    return "<h1> Advertisers: {0} </h1>".format(IDS)
+# Manually add posts by country and load into db
+# @main.route("/loadsome/<country>", methods=["POST"])
+# def add_advert(country):
+#     body = dict(request.get_json())
+#     details = body["posts"]
+#     if not details or len(details) == 0 or not country:
+#         return "Pls provide at least one post and country"
+#     parse_and_insert(body, country)
+#     return "OK"
 
 
-# Mock main loop for testing purposes
-# manually add posts by country and load into db
-@main.route("/loadsome/<country>", methods=["POST"])
-def add_advert(country):
-    body = dict(request.get_json())
-    details = body["posts"]
-    if not details or len(details) == 0 or not country:
-        return "Pls provide at least one post and country"
-    parse_and_load_adverts(body, country)
-    return "OK"
-
-
-@main.route("/refreshtoken", methods=["GET"])
+@main.route("/refreshtoken", methods=["POST"])
 def refresh_token():
     latest_record = db.session.query(Tokens).order_by(Tokens.id.desc()).first()
     SHORT_TOKEN = latest_record.short_token
@@ -270,6 +206,11 @@ def refresh_token():
     db.session.commit()
 
     return "OK"
+
+
+def get_long_token():
+    latest_record = db.session.query(Tokens).order_by(Tokens.id.desc()).first()
+    return latest_record.long_token
 
 
 @main.route("/media", methods=["GET"])
