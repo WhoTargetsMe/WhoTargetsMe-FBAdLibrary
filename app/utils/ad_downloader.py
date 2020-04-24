@@ -80,7 +80,9 @@ def download_ads(page_ids, next_page, country="ALL", pages=False):
         while i <= PAGES_BETWEEN_STORING:
             argsi = build_args(ADS_PER_PAGE, url=next_page)
             try:
-                print("=======ARGS", argsi["search_page_ids"], argsi["after"])
+                # just try accessing some key params
+                argsi["search_page_ids"]
+                argsi["after"]
             except:
                 return result, None
             r = graph.request(method, argsi)

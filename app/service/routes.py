@@ -26,6 +26,8 @@ def ads_for_page_id(page_id, country, ad_creation_time_min=False):
     next_page = "start"
     body_count = 0
 
+    print("[{0}] Starting page_id: {1}".format(datetime.now(), page_id))
+
     while next_page:
 
         body, next_page = download_ads([page_id], next_page, country=country)
@@ -54,7 +56,7 @@ def ads_for_page_id(page_id, country, ad_creation_time_min=False):
 @main.route("/callloader", methods=["POST"])
 def call_loader(country="US", page_id=False, all_ads=False):
 
-    if request.method == "POST":
+    if request:
         """ 
         Country code has two uses:
         1. Select which advertisers from our db, filtered by country
