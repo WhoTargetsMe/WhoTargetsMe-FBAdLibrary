@@ -5,6 +5,7 @@ from config.aws import (
     _SQLALCHEMY_DATABASE_URI,
     _APP_ID,
     _APP_SECRET,
+    _SENTRY_DSN,
 )
 
 DEBUG = True
@@ -18,6 +19,7 @@ APP_ID = _APP_ID
 APP_SECRET = _APP_SECRET
 API_VERSION = "3.1"
 FLASK_ENV = "production"
+SENTRY_DSN = _SENTRY_DSN
 
 # How many pages we want to fetch between each storing operation
 PAGES_BETWEEN_STORING = 1

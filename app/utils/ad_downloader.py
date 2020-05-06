@@ -40,6 +40,13 @@ def build_args(adspp, url=None):
 
 
 def download_ads(page_ids, next_page, country="ALL", pages=False):
+    """
+    Search parameters
+    https://developers.facebook.com/docs/marketing-api/reference/ads_archive/
+
+    Ads available fields
+    https://developers.facebook.com/docs/graph-api/reference/archived-ad/
+    """
 
     API_VERSION = app.config["API_VERSION"]
     ADS_PER_PAGE = app.config["ADS_PER_PAGE"]
@@ -56,9 +63,28 @@ def download_ads(page_ids, next_page, country="ALL", pages=False):
         "search_page_ids"
     ] = page_ids  # list of specific page (advertiser) ids if we know them
     args["ad_active_status"] = "ALL"
-    args[
-        "fields"
-    ] = "ad_creation_time,ad_delivery_start_time,ad_delivery_stop_time,ad_creative_body,ad_creative_link_caption,ad_creative_link_title,ad_creative_link_description,ad_snapshot_url,currency,funding_entity,demographic_distribution,impressions,page_id,page_name,region_distribution,spend"
+    args["fields"] = ",".join(
+        [
+            "ad_creation_time",
+            "ad_creative_body",
+            "ad_creative_link_caption",
+            "ad_creative_link_description",
+            "ad_creative_link_title",
+            "ad_delivery_start_time",
+            "ad_delivery_stop_time",
+            "ad_snapshot_url",
+            "currency",
+            "demographic_distribution",
+            "funding_entity",
+            "impressions",
+            "page_id",
+            "page_name",
+            # "potential_reach",
+            # "publisher_platform",
+            "region_distribution",
+            "spend",
+        ]
+    )
     args["limit"] = ADS_PER_PAGE
     method = "/ads_archive"
     i = 1
