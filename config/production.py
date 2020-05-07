@@ -1,7 +1,5 @@
 import os
 from config.aws import (
-    _ACCESS_KEY,
-    _SECRET_KEY,
     _SQLALCHEMY_DATABASE_URI,
     _APP_ID,
     _APP_SECRET,
@@ -9,8 +7,7 @@ from config.aws import (
 )
 
 DEBUG = True
-ACCESS_KEY = _ACCESS_KEY
-SECRET_KEY = _SECRET_KEY
+
 # postgresql://<username>:<userpassword>@<url>/<dbname>
 # SQLALCHEMY_DATABASE_URI=os.environ['DATABASE_URL']
 SQLALCHEMY_DATABASE_URI = _SQLALCHEMY_DATABASE_URI

@@ -18,12 +18,15 @@ from time import sleep
 
 
 def upload_to_aws(img, bucket, f_name, creds):
-    s3 = boto3.client(
-        "s3",
-        aws_access_key_id=creds["access_key"],
-        aws_secret_access_key=creds["secret_key"],
-        region_name="eu-central-1",
-    )
+    """ 
+    Production authentication is handled using IAM Roles
+    https://boto3.amazonaws.com/v1/documentation/api/latest/guide/configuration.html#iam-role
+
+    If you need authentication locally, you could use env vars AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY
+
+    If you have a ~/.aws/credentials file, boto3 can get the creds from there. AWS_PROFILE optional
+    """
+    s3 = boto3.client("s3", region_name="eu-central-1",)
     try:
         in_mem_file = io.BytesIO()
         img.save(in_mem_file, "JPEG")
