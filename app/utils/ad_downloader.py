@@ -3,6 +3,7 @@ from app.service.models import Tokens
 from facebook import GraphAPI, GraphAPIError
 from flask import current_app as app
 from urllib.parse import urlsplit, parse_qs
+from sentry_sdk import capture_exception
 import os
 import sys
 
@@ -90,6 +91,15 @@ def download_ads(page_ids, next_page, country="ALL", pages=False):
     i = 1
     result = []
 
+    def handleGraphAPIError(e):
+        # As a first action, we're going to log to Sentry and try on the next advertiser
+        capture_exception(e)
+        next_page = None
+
+        # Code 4 is rate limit. We need to just quit here.
+        if e.code is 4:
+            raise GraphAPIError
+
     if next_page == "start":
         try:
             r = graph.request(method, args)
@@ -98,9 +108,8 @@ def download_ads(page_ids, next_page, country="ALL", pages=False):
             next_page = r.get("paging", {}).get("next", None)
             # print("-------RESULTS----------", "iterations=", i, "len data=", len(data))
 
-        except Exception as e:
-            print("Error -+", e.message)
-            print("Error ->", sys.exc_info()[0].message)
+        except GraphAPIError as e:
+            handleGraphAPIError(e)
 
     else:
         while i <= PAGES_BETWEEN_STORING:
@@ -111,11 +120,16 @@ def download_ads(page_ids, next_page, country="ALL", pages=False):
                 argsi["after"]
             except:
                 return result, None
-            r = graph.request(method, argsi)
-            data = r.get("data", [])
-            result.extend(data)
-            next_page = r.get("paging", {}).get("next", None)
-            i += 1
-            # print("-------RESULTS----------", "iterations=", i, "len data=", len(data))
+
+            try:
+                r = graph.request(method, argsi)
+                data = r.get("data", [])
+                result.extend(data)
+                next_page = r.get("paging", {}).get("next", None)
+                i += 1
+                # print("-------RESULTS----------", "iterations=", i, "len data=", len(data))
+
+            except GraphAPIError as e:
+                handleGraphAPIError(e)
 
     return result, next_page
