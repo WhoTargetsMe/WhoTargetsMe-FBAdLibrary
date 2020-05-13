@@ -224,8 +224,6 @@ def download_media():
     [print(i.post_id) for i in advrts[:size]]
     creds = {
         "long_token": get_long_token(),
-        "access_key": ap.config["ACCESS_KEY"],
-        "secret_key": ap.config["SECRET_KEY"],
     }
     if ap.config["FLASK_ENV"] == "development":
         driver = webdriver.Chrome()
