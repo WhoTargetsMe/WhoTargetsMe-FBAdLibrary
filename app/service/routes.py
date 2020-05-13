@@ -31,13 +31,14 @@ def ads_for_page_id(page_id, country, ad_creation_time_min=False):
     while next_page:
 
         body, next_page = download_ads([page_id], next_page, country=country)
+
+        if len(body) == 0:
+            next_page = False
+            break
+
         body_count += len(body)
 
         parse_and_insert(body, country)
-
-        if len(body) is 0:
-            next_page = False
-            break
 
         """
         If the minimum ad_creation_time already stored is later than the last in 
