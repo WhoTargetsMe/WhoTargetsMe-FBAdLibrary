@@ -6,6 +6,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_apscheduler import APScheduler
 import sentry_sdk
 from sentry_sdk.integrations.flask import FlaskIntegration
+from sentry_sdk.integrations.sqlalchemy import SqlalchemyIntegration
 import os
 
 scheduler = APScheduler()
@@ -17,7 +18,10 @@ def create_app(config_type):
     configuration = os.path.join(os.getcwd(), 'config', config_type + '.py')
     app.config.from_pyfile(configuration)
 
-    sentry_sdk.init(dsn=app.config["SENTRY_DSN"], integrations=[FlaskIntegration()])
+    sentry_sdk.init(
+        dsn=app.config["SENTRY_DSN"], 
+        integrations=[FlaskIntegration(), SqlalchemyIntegration()]
+    )
 
     db.init_app(app)
     Migrate(app, db)

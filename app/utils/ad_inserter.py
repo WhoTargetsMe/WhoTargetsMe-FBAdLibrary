@@ -94,7 +94,7 @@ def bulk_insert_adverts(fb_ads, country):
             print("problem adding fb_ad for advert insert", str(e))
 
     # if there are no ads, e.g. skip_ad condition is always met, then return
-    if len(ads) is 0:
+    if len(ads) == 0:
         return []
 
     try:
@@ -174,7 +174,7 @@ def bulk_insert_impressions(fb_ads, adverts, country):
                 print("problem adding fb_ad for impression insert", str(e))
 
     # no records to insert? just return then
-    if len(impressions) is 0:
+    if len(impressions) == 0:
         return []
 
     statement = pg_insert(Impressions.__table__).returning(
@@ -276,7 +276,7 @@ def bulk_insert_distributions(fb_ads, impressions, distribution_type, table):
                 print("cannot add distribution to insert", e, fb_ad)
 
     # if there are no distributions, then return
-    if len(distributions) is 0:
+    if len(distributions) == 0:
         return []
 
     statement = pg_insert(table)
@@ -310,7 +310,7 @@ def skip_ad(fb_ad):
 # Main
 def parse_and_insert(fb_ads, country):
 
-    if not fb_ads or len(fb_ads) is 0:
+    if not fb_ads or len(fb_ads) == 0:
         return
 
     adverts = bulk_insert_adverts(fb_ads, country)

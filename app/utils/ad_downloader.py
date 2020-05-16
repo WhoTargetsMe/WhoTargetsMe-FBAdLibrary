@@ -97,7 +97,7 @@ def download_ads(page_ids, next_page, country="ALL", pages=False):
         next_page = None
 
         # Code 4 is rate limit. We need to just quit here.
-        if e.code is 4:
+        if e.code == 4:
             raise GraphAPIError
 
     if next_page == "start":
