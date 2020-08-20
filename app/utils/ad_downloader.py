@@ -80,8 +80,8 @@ def download_ads(page_ids, next_page, country="ALL", pages=False):
             "impressions",
             "page_id",
             "page_name",
-            # "potential_reach",
-            # "publisher_platform",
+            "potential_reach",
+            "publisher_platforms",
             "region_distribution",
             "spend",
         ]

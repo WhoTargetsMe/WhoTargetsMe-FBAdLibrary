@@ -106,6 +106,12 @@ class Adverts(db.Model):
     md = relationship("Media", cascade="all, delete-orphan", backref="adverts")
     text_search = db.Column(TSVECTOR)
 
+    """Can be keys {lower_bound, upper_bound} """
+    potential_reach = db.Column(db.JSON, nullable=True)
+
+    """Can be ["facebook", "instagram"] """
+    publisher_platforms = db.Column(db.ARRAY(db.String), nullable=True)
+
     def __init__(
         self,
         page_id,
@@ -124,6 +130,8 @@ class Adverts(db.Model):
         currency,
         funding_entity,
         ad_info,
+        potential_reach,
+        publisher_platforms,
     ):
         self.page_id = page_id
         self.page_name = page_name
@@ -141,6 +149,8 @@ class Adverts(db.Model):
         self.currency = currency
         self.funding_entity = funding_entity
         self.ad_info = ad_info
+        self.potential_reach = potential_reach
+        self.publisher_platforms = publisher_platforms
 
     def __repr__(self):
         return "The page_id is {}, page_name is {} ".format(
