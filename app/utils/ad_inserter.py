@@ -43,6 +43,8 @@ def advert_dict(fb_ad, country):
         "page_id": fb_ad["page_id"],
         "page_name": fb_ad["page_name"],
         "post_id": extract_id(fb_ad["ad_snapshot_url"]),
+        "potential_reach": fb_ad.get("potential_reach", None),
+        "publisher_platforms": fb_ad.get("publisher_platforms", None),
     }
 
 
@@ -80,6 +82,8 @@ def bulk_insert_adverts(fb_ads, country):
             "ad_delivery_start_time": statement.excluded.ad_delivery_start_time,
             "ad_delivery_stop_time": statement.excluded.ad_delivery_stop_time,
             "ad_snapshot_url": statement.excluded.ad_snapshot_url,
+            "potential_reach": statement.excluded.potential_reach,
+            "publisher_platforms": statement.excluded.publisher_platforms,
             "updated_at": datetime.now(),
         },
     )
