@@ -46,7 +46,12 @@ def ads_for_page_id(page_id, country, ad_creation_time_min=False):
         """
         if ad_creation_time_min:
             body_last_ad_creation_time = dateparse(body[-1]["ad_creation_time"])
-            if ad_creation_time_min > body_last_ad_creation_time:
+
+            """ 
+            Remove timezone info to avoid error: 
+                `Can't subtract offset-naive and offset-aware datetimes`
+            """
+            if ad_creation_time_min.replace(tzinfo=None) > body_last_ad_creation_time:
                 next_page = False
 
     print(
