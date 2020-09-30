@@ -1,7 +1,7 @@
 from . import scheduler
 
 
-@scheduler.task("cron", month="*", day="*", hour="1,9,18", minute="8")
+@scheduler.task("cron", month="*", day="*", hour="*", minute="8")
 def run_task_US():
     with scheduler.app.app_context():
         from app.service.routes import call_loader
