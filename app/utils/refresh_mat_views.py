@@ -8,8 +8,10 @@ def refresh_mat_view(name, concurrently):
         db.session.flush()
         _con = "CONCURRENTLY " if concurrently else ""
         db.session.execute("REFRESH MATERIALIZED VIEW " + _con + name)
-    except:
-        print("Problem updating view " + name)
+        db.session.execute("commit")
+
+    except Exception as e:
+        print("Problem updating view " + name, str(e))
 
 
 def refresh_all_mat_views(concurrently=True):
