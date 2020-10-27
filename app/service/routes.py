@@ -21,7 +21,7 @@ def get_test_data():
     return "<h1> the greeting is: {0} </h1>".format(x.text)
 
 
-def ads_for_page_id(page_id, country, ad_creation_time_min=False):
+def ads_for_page_id(page_id, country, search, ad_creation_time_min=False):
 
     next_page = "start"
     body_count = 0
@@ -30,7 +30,9 @@ def ads_for_page_id(page_id, country, ad_creation_time_min=False):
 
     while next_page:
 
-        body, next_page = download_ads([page_id], next_page, country=country)
+        body, next_page = download_ads(
+            [page_id], next_page, country=country, search=search
+        )
 
         if len(body) == 0:
             next_page = False
@@ -64,21 +66,34 @@ def ads_for_page_id(page_id, country, ad_creation_time_min=False):
 
 
 @main.route("/callloader", methods=["POST"])
-def call_loader(country="US", page_id=False, all_ads=False):
+# def call_loader(country="US", page_id=False, all_ads=False, search={}):
+def call_loader(
+    country="US",
+    search=dict(ad_reached_countries=["US"], ad_active_status="ALL"),
+    all_ads=False,
+):
 
+    # x-www-form-urlencoded
+    # if request:
+    #     """
+    #     Country code has two uses:
+    #     1. Select which advertisers from our db, filtered by country
+    #     2. Use in FB graph as search criteria "ad_reached_countries"
+    #     """
+    #     country = request.form.get("country", country)
+
+    #     """ Select single advertiser """
+    #     page_id = request.form.get("page_id", page_id)
+
+    #     """ Collect all historical ads, as opposed to max_ad_creation_time """
+    #     all_ads = request.form.get("all_ads", all_ads)
+
+    # application/json
     if request:
-        """ 
-        Country code has two uses:
-        1. Select which advertisers from our db, filtered by country
-        2. Use in FB graph as search criteria "ad_reached_countries"
-        """
-        country = request.form.get("country", country)
+        request_json = request.get_json()
 
-        """ Select single advertiser """
-        page_id = request.form.get("page_id", page_id)
-
-        """ Collect all historical ads, as opposed to max_ad_creation_time """
-        all_ads = request.form.get("all_ads", all_ads)
+        all_ads = request_json.get("all_ads", all_ads)
+        search = request_json.get("search", search)
 
     with ap.app_context():
 
@@ -93,7 +108,7 @@ def call_loader(country="US", page_id=False, all_ads=False):
                 FROM
                     advertisers 
                     LEFT JOIN adverts ON advertisers.page_id = adverts.page_id
-                WHERE advertisers.country = :country
+                WHERE advertisers.country = ANY(:countries)
                 GROUP BY
                     advertisers.page_id,
                     advertisers.country
@@ -107,16 +122,24 @@ def call_loader(country="US", page_id=False, all_ads=False):
             Adverts.__table__.columns.ad_creation_time,
             Adverts.__table__.columns.id,
         )
-        results = connection.execute(statement, country=country).fetchall()
+        advertisers = connection.execute(
+            statement, countries=search.get("ad_reached_countries", [country])
+        ).fetchall()
 
-        for advertiser in results:
+        print("[{0}] Found advertisers: {1}".format(datetime.now(), len(advertisers)))
+
+        for advertiser in advertisers:
             # skip if we're being page_id specific. still got to be in db though
-            if page_id and int(page_id) != int(advertiser["page_id"]):
-                continue
+            # if (
+            #     search.get("search_page_ids", False)
+            #     and int(advertiser["page_id"]) not in search["search_page_ids"]
+            # ):
+            #     continue
 
             ads_for_page_id(
                 advertiser["page_id"],
                 advertiser["country"],
+                search,
                 ad_creation_time_min=False
                 if all_ads
                 else advertiser["max_ad_creation_time"],
@@ -225,7 +248,7 @@ def get_long_token():
     return latest_record.long_token
 
 
-@main.route("/media", methods=["GET"])
+# @main.route("/media", methods=["GET"])
 def download_media():
     size = 20
     advrts = Adverts.query.filter_by(image_link=None)

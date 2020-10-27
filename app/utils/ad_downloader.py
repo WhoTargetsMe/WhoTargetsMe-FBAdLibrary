@@ -40,7 +40,7 @@ def build_args(adspp, url=None):
     return args
 
 
-def download_ads(page_ids, next_page, country="ALL", pages=False):
+def download_ads(page_ids, next_page, country="ALL", pages=False, search=dict()):
     """
     Search parameters
     https://developers.facebook.com/docs/marketing-api/reference/ads_archive/
@@ -55,7 +55,7 @@ def download_ads(page_ids, next_page, country="ALL", pages=False):
 
     graph = GraphAPI(version=API_VERSION)
 
-    args = dict()
+    args = search
     args["access_token"] = get_long_token()
     args["search_terms"] = ""
     args["ad_type"] = "POLITICAL_AND_ISSUE_ADS"
