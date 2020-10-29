@@ -11,7 +11,7 @@ from app.utils.functions import (
     extract_id,
     parse_bounds,
     parse_distr,
-    finished_main_scripts,
+    
 )
 from datetime import datetime, timezone
 from flask import current_app as app

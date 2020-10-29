@@ -29,11 +29,3 @@ def parse_distr(obj, key):
     if obj is not None and sum([1 for k in keys if k in obj.keys()]) == len(keys):
         return [obj[k] for k in keys]
     return [None for k in keys]
-
-
-def finished_main_scripts():
-    return datetime.now().hour > 25
-
-
-def show_users():
-    print("running SCHEDULER_JOB", datetime.now())
