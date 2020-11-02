@@ -11,7 +11,7 @@ from app.utils.functions import (
     extract_id,
     parse_bounds,
     parse_distr,
-    finished_main_scripts,
+    
 )
 from datetime import datetime, timezone
 from flask import current_app as app
@@ -303,10 +303,10 @@ def skip_ad(fb_ad):
     should_skip = False
 
     # check if the ad's run has finished
-    if fb_ad.get("ad_delivery_stop_time", False):
-        ad_delivery_stop_time = cast_date(fb_ad.get("ad_delivery_stop_time"))
-        has_finished_run = ad_delivery_stop_time < datetime.now(timezone.utc)
-        should_skip = has_finished_run
+    # if fb_ad.get("ad_delivery_stop_time", False):
+    #     ad_delivery_stop_time = cast_date(fb_ad.get("ad_delivery_stop_time"))
+    #     has_finished_run = ad_delivery_stop_time < datetime.now(timezone.utc)
+    #     should_skip = has_finished_run
 
     return should_skip
 
