@@ -17,9 +17,7 @@ def extract_id(x):
 
 
 def parse_bounds(obj):
-    if obj is not None and "lower_bound" in obj.keys() and "upper_bound" in obj.keys():
-        return obj["lower_bound"], obj["upper_bound"]
-    return None, None
+    return obj.get("lower_bound", None), obj.get("upper_bound", None)
 
 
 def parse_distr(obj, key):
