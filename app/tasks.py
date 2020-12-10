@@ -2,7 +2,7 @@ from . import scheduler
 from app.utils.refresh_mat_views import refresh_all_mat_views
 
 
-@scheduler.task("cron", month="*", day="*", hour="*", minute="8")
+@scheduler.task("cron", month="*", day="*", hour="10", minute="8")
 def run_task_US():
     with scheduler.app.app_context():
         from app.service.routes import call_loader

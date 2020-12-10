@@ -92,8 +92,11 @@ def download_ads(page_ids, next_page, country="ALL", pages=False, search=dict())
     result = []
 
     def handleGraphAPIError(e):
-        # As a first action, we're going to log to Sentry and try on the next advertiser
-        capture_exception(e)
+        if app.config["FLASK_ENV"] == "development":
+            print(e)
+        else:
+            capture_exception(e)
+
         next_page = None
 
         # Code 4 is rate limit. We need to just quit here.
