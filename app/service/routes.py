@@ -112,7 +112,7 @@ def call_loader(
             statement, countries=search.get("ad_reached_countries", [country])
         ).fetchall()
 
-        print("[{0}] Found advertisers: {1}".format(datetime.now(), len(advertisers)))
+        print(f"[{datetime.now()}] {country} advertisers: {len(advertisers)}")
 
         for advertiser in advertisers:
             ads_for_page_id(
