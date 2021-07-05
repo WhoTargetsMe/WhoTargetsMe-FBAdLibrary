@@ -4,7 +4,7 @@ from app.utils.constants import COUNTRIES
 
 # 5/9 = 5am, 2pm, and 11pm
 # https://cron.help/#0_5/9_*_*_*
-@scheduler.task("cron", minute="0", hour="5/9")
+@scheduler.task("cron", minute="0", hour="5")
 def run_task_ALL():
 
     with scheduler.app.app_context():
