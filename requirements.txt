@@ -42,7 +42,7 @@ lazy-object-proxy==1.4.3
 Mako==1.1.0
 MarkupSafe==1.1.1
 mccabe==0.6.1
-numpy==1.17.2
+numpy==1.22.0
 pandas==0.25.1
 pathspec==0.8.0
 Pillow==6.2.0
